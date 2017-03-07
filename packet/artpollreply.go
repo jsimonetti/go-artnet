@@ -71,8 +71,8 @@ type ArtPollReplyPacket struct {
 	// field as the information is implicit in PortTypes.
 	NumPorts uint16
 
-	// TODO (4x uint8, array)
-	PortTypes [4]uint8
+	// PortTypes defines the operation and protocol of each channel
+	PortTypes [4]code.PortType
 
 	// GoodInput defines input status of the node
 	GoodInput [4]code.GoodInput
@@ -183,7 +183,7 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 
 	p.NumPorts = uint16(b[172]) | uint16(b[173])<<8
 	for i, r := range b[174:178] {
-		p.PortTypes[i] = r
+		p.PortTypes[i] = code.PortType(r)
 	}
 
 	for i, r := range b[178:182] {
