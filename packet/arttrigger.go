@@ -25,6 +25,10 @@ var _ ArtNetPacket = &ArtTriggerPacket{}
 // If the Oem field is set to a value other than 0xffff then the Key and SubKey fields are
 // manufacturer specific.
 //
+// The Payload is a fixed length array of 512, 8-bit bytes. The interpretation of this field is
+// dependent upon the Oem field. If the Oem field is set to a value other than 0xffff then
+// the Payload is manufacturer specific.
+//
 // However, when the Oem field = 0xffff the meaning of the Key, SubKey and Payload is:
 //
 // Key - Name     - SubKey:
