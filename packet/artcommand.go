@@ -15,6 +15,18 @@ var _ ArtNetPacket = &ArtCommandPacket{}
 // The ArtCommand packet is used to send property set style commands. The packet can be
 // unicast or broadcast, the decision being application specific.
 //
+// The Data field contains the command text. The text is ASCII encoded and is null terminated
+// and is case insensitive. It is legal, although inefficient, to set the Data array size to
+// the maximum of 512 and null pad unused entries.
+// The command text may contain multiple commands and adheres to the following syntax:
+//
+//   Command=Data&
+//
+// The ampersand is a break between commands. Also note that the text is capitalised for
+// readability; it is case insensitive. Thus far, two commands are defined by Art-Net. It is
+// anticipated that additional commands will be added as other manufacturers register commands
+// which have industry wide relevance. These commands shall be transmitted with EstaMan = 0xFFFF.
+//
 // Packet Strategy:
 //  Controller -  Receive:            Application Specific
 //                Unicast Transmit:   Application Specific
@@ -32,10 +44,8 @@ type ArtCommandPacket struct {
 	// this packet type contains a version
 	version [2]byte
 
-	// ESTAmanufacturer contains a code used to represent equipment manufacturer.
-	// They are assigned by ESTA. This field can be interpreted as two ASCII bytes
-	// representing the manufacturer initials.
-	ESTAmanufacturer [2]byte
+	// estamanufacturer contains a code used to represent equipment manufacturer.
+	estamanufacturer [2]byte
 
 	// Length indicates the length of the data
 	Length uint16
@@ -51,7 +61,8 @@ func NewArtCommandPacket() *ArtCommandPacket {
 			OpCode: code.OpCommand,
 			id:     ArtNet,
 		},
-		version: version.Bytes(),
+		version:          version.Bytes(),
+		estamanufacturer: [2]byte{0xff, 0xff},
 	}
 }
 
