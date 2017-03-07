@@ -26,8 +26,8 @@ type ArtNetPacket interface {
 // ArtNet is the fixed string "Art-Net" terminated with a zero
 var ArtNet = [8]byte{0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00}
 
-// Packet contains the base header for a ArtNet Packet
-type Packet struct {
+// Header contains the base header for an ArtNet Packet
+type Header struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
 	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
 	id [8]byte
@@ -38,7 +38,7 @@ type Packet struct {
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into a Packet.
-func (p *Packet) unmarshalHeader(b []byte) error {
+func (p *Header) unmarshal(b []byte) error {
 	if len(b) < 10 {
 		return errIncorrectHeaderLength
 	}
@@ -49,7 +49,7 @@ func (p *Packet) unmarshalHeader(b []byte) error {
 	return p.validate()
 }
 
-func (p *Packet) validate() error {
+func (p *Header) validate() error {
 	if !code.Valid(p.OpCode) {
 		return errInvalidOpCode
 	}

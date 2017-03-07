@@ -11,8 +11,8 @@ var _ ArtNetPacket = &ArtPollReplyPacket{}
 
 // ArtPollReplyPacket contains an ArtPollReply Packet.
 type ArtPollReplyPacket struct {
-	// Inherit the Packet header
-	Packet
+	// Inherit the Header header
+	Header
 
 	// IPAddress is the Node’s IPv4 address. When binding is implemented, bound nodes may
 	// share the root node’s IP Address and the BindIndex is used to differentiate the nodes.
@@ -122,7 +122,7 @@ type ArtPollReplyPacket struct {
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
 func NewArtPollReplyPacket() *ArtPollReplyPacket {
 	return &ArtPollReplyPacket{
-		Packet: Packet{
+		Header: Header{
 			OpCode: code.OpPoll,
 			id:     ArtNet,
 		},
@@ -137,7 +137,7 @@ func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
 func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
-	if err := p.Packet.unmarshalHeader(b[:10]); err != nil {
+	if err := p.Header.unmarshal(b[:10]); err != nil {
 		return err
 	}
 	if len(b) != 238 {

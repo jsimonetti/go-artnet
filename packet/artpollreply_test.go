@@ -18,7 +18,7 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 		{
 			name: "Empty",
 			p: ArtPollReplyPacket{
-				Packet: Packet{
+				Header: Header{
 					OpCode: code.OpPollReply,
 				},
 				IPAddress:  net.IP{0x00, 0x00, 0x00, 0x00},
@@ -63,7 +63,7 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 		{
 			name: "WithInfo",
 			p: ArtPollReplyPacket{
-				Packet: Packet{
+				Header: Header{
 					OpCode: code.OpPollReply,
 				},
 				IPAddress:  net.ParseIP("10.1.1.1").To4(),

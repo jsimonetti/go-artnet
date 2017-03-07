@@ -18,7 +18,7 @@ func TestArtPollPacketMarshal(t *testing.T) {
 		{
 			name: "Empty",
 			p: ArtPollPacket{
-				Packet: Packet{
+				Header: Header{
 					id:     ArtNet,
 					OpCode: code.OpPoll,
 				},
@@ -32,7 +32,7 @@ func TestArtPollPacketMarshal(t *testing.T) {
 		{
 			name: "WithDiagnosticsPrioLow",
 			p: ArtPollPacket{
-				Packet: Packet{
+				Header: Header{
 					id:     ArtNet,
 					OpCode: code.OpPoll,
 				},
@@ -48,7 +48,7 @@ func TestArtPollPacketMarshal(t *testing.T) {
 		{
 			name: "WithDiagnosticsUniPrioMedium",
 			p: ArtPollPacket{
-				Packet: Packet{
+				Header: Header{
 					id:     ArtNet,
 					OpCode: code.OpPoll,
 				},
@@ -64,7 +64,7 @@ func TestArtPollPacketMarshal(t *testing.T) {
 		{
 			name: "WithReplyOnChangeVlcPrioVolatile",
 			p: ArtPollPacket{
-				Packet: Packet{
+				Header: Header{
 					id:     ArtNet,
 					OpCode: code.OpPoll,
 				},

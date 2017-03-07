@@ -12,8 +12,8 @@ var _ ArtNetPacket = &ArtPollPacket{}
 
 // ArtPollPacket contains an ArtPoll Packet.
 type ArtPollPacket struct {
-	// Inherit the Packet header
-	Packet
+	// Inherit the Header header
+	Header
 
 	// this packet type contains a version
 	version [2]byte
@@ -28,7 +28,7 @@ type ArtPollPacket struct {
 // NewArtPollPacket returns an ArtNetPacket with the correct OpCode
 func NewArtPollPacket() *ArtPollPacket {
 	return &ArtPollPacket{
-		Packet: Packet{
+		Header: Header{
 			OpCode: code.OpPoll,
 			id:     ArtNet,
 		},
