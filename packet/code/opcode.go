@@ -1,9 +1,9 @@
+//go:generate stringer -type=OpCode
 package code
 
 import "fmt"
 
 // OpCode defines the class of data following an UDP packet.
-//go:generate stringer -type=OpCode
 type OpCode uint16
 
 // Unmarshal unmarshals the contents of a byte slice into an OpCode.
