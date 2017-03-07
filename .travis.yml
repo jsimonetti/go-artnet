@@ -6,7 +6,6 @@ os:
   - linux
 before_install:
   - go get github.com/golang/lint/golint
-  - go get -d ./...
 script:
   - go vet ./...
   - export GOFMT=$(gofmt -l .)
