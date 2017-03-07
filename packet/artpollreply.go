@@ -74,10 +74,10 @@ type ArtPollReplyPacket struct {
 	// TODO (4x uint8, array)
 	PortTypes [4]uint8
 
-	// TODO (4x uint8, array)
-	GoodInput [4]uint8
+	// GoodInput defines input status of the node
+	GoodInput [4]code.GoodInput
 
-	// TODO (4x uint8, array)
+	// TODO
 	GoodOutput [4]uint8
 
 	// TODO (4x uint8, array)
@@ -187,7 +187,7 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	}
 
 	for i, r := range b[178:182] {
-		p.GoodInput[i] = r
+		p.GoodInput[i] = code.GoodInput(r)
 	}
 
 	for i, r := range b[182:186] {
