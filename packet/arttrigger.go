@@ -77,22 +77,17 @@ type ArtTriggerPacket struct {
 
 // NewArtTriggerPacket returns an ArtNetPacket with the correct OpCode
 func NewArtTriggerPacket() *ArtTriggerPacket {
-	return &ArtTriggerPacket{
-		Header: Header{
-			OpCode: code.OpTrigger,
-			id:     ArtNet,
-		},
-		version: version.Bytes(),
-	}
+	return &ArtTriggerPacket{}
 }
 
 // MarshalBinary marshals an ArtTriggerPacket into a byte slice.
 func (p *ArtTriggerPacket) MarshalBinary() ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), p.validate()
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtTriggerPacket.
@@ -101,10 +96,17 @@ func (p *ArtTriggerPacket) UnmarshalBinary(b []byte) error {
 	return p.validate()
 }
 
-// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+// validate is used to validate the Packet.
 func (p *ArtTriggerPacket) validate() error {
 	if p.OpCode != code.OpTrigger {
 		return errInvalidOpCode
 	}
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *ArtTriggerPacket) finish() {
+	p.OpCode = code.OpTrigger
+	p.id = ArtNet
+	p.version = version.Bytes()
 }

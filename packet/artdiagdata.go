@@ -51,22 +51,17 @@ type ArtDiagDataPacket struct {
 
 // NewArtDiagDataPacket returns an ArtNetPacket with the correct OpCode
 func NewArtDiagDataPacket() *ArtDiagDataPacket {
-	return &ArtDiagDataPacket{
-		Header: Header{
-			OpCode: code.OpDiagData,
-			id:     ArtNet,
-		},
-		version: version.Bytes(),
-	}
+	return &ArtDiagDataPacket{}
 }
 
 // MarshalBinary marshals an ArtDiagDataPacket into a byte slice.
 func (p *ArtDiagDataPacket) MarshalBinary() ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), p.validate()
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtDiagDataPacket.
@@ -75,10 +70,17 @@ func (p *ArtDiagDataPacket) UnmarshalBinary(b []byte) error {
 	return p.validate()
 }
 
-// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+// validate is used to validate the Packet.
 func (p *ArtDiagDataPacket) validate() error {
 	if p.OpCode != code.OpDiagData {
 		return errInvalidOpCode
 	}
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *ArtDiagDataPacket) finish() {
+	p.OpCode = code.OpDiagData
+	p.version = version.Bytes()
+	p.id = ArtNet
 }

@@ -74,22 +74,17 @@ type ArtDMXPacket struct {
 
 // NewArtDMXPacket returns an ArtNetPacket with the correct OpCode
 func NewArtDMXPacket() *ArtDMXPacket {
-	return &ArtDMXPacket{
-		Header: Header{
-			OpCode: code.OpDMX,
-			id:     ArtNet,
-		},
-		version: version.Bytes(),
-	}
+	return &ArtDMXPacket{}
 }
 
 // MarshalBinary marshals an ArtDMXPacket into a byte slice.
 func (p *ArtDMXPacket) MarshalBinary() ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), p.validate()
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtDMXPacket.
@@ -98,10 +93,17 @@ func (p *ArtDMXPacket) UnmarshalBinary(b []byte) error {
 	return p.validate()
 }
 
-// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+// validate is used to validate the Packet.
 func (p *ArtDMXPacket) validate() error {
 	if p.OpCode != code.OpDMX {
 		return errInvalidOpCode
 	}
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *ArtDMXPacket) finish() {
+	p.OpCode = code.OpDMX
+	p.version = version.Bytes()
+	p.id = ArtNet
 }

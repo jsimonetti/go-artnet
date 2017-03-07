@@ -132,22 +132,18 @@ type ArtPollReplyPacket struct {
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
 func NewArtPollReplyPacket() *ArtPollReplyPacket {
-	return &ArtPollReplyPacket{
-		Header: Header{
-			OpCode: code.OpPollReply,
-			id:     ArtNet,
-		},
-	}
+	return &ArtPollReplyPacket{}
 }
 
 // MarshalBinary marshals an ArtPollReplyPacket into a byte slice.
 // TODO
 func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), p.validate()
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
@@ -228,13 +224,19 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	return p.validate()
 }
 
-// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+// validate is used to validate the Packet.
 func (p *ArtPollReplyPacket) validate() error {
 	if p.OpCode != code.OpPollReply {
 		return errInvalidOpCode
 	}
 	if !code.ValidStyle(p.Style) {
-		return errInvalidStyle
+		return errInvalidStyleCode
 	}
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *ArtPollReplyPacket) finish() {
+	p.OpCode = code.OpPollReply
+	p.id = ArtNet
 }

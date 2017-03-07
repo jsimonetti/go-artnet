@@ -59,22 +59,17 @@ type ArtNzsPacket struct {
 
 // NewArtNzsPacket returns an ArtNetPacket with the correct OpCode
 func NewArtNzsPacket() *ArtNzsPacket {
-	return &ArtNzsPacket{
-		Header: Header{
-			OpCode: code.OpNzs,
-			id:     ArtNet,
-		},
-		version: version.Bytes(),
-	}
+	return &ArtNzsPacket{}
 }
 
 // MarshalBinary marshals an ArtNzsPacket into a byte slice.
 func (p *ArtNzsPacket) MarshalBinary() ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), p.validate()
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtNzsPacket.
@@ -83,10 +78,17 @@ func (p *ArtNzsPacket) UnmarshalBinary(b []byte) error {
 	return p.validate()
 }
 
-// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+// validate is used to validate the Packet.
 func (p *ArtNzsPacket) validate() error {
 	if p.OpCode != code.OpNzs {
 		return errInvalidOpCode
 	}
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *ArtNzsPacket) finish() {
+	p.OpCode = code.OpNzs
+	p.id = ArtNet
+	p.version = version.Bytes()
 }

@@ -56,22 +56,17 @@ type ArtTimeCodePacket struct {
 
 // NewArtTimeCodePacket returns an ArtNetPacket with the correct OpCode
 func NewArtTimeCodePacket() *ArtTimeCodePacket {
-	return &ArtTimeCodePacket{
-		Header: Header{
-			OpCode: code.OpTimeCode,
-			id:     ArtNet,
-		},
-		version: version.Bytes(),
-	}
+	return &ArtTimeCodePacket{}
 }
 
 // MarshalBinary marshals an ArtTimeCodePacket into a byte slice.
 func (p *ArtTimeCodePacket) MarshalBinary() ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), p.validate()
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtTimeCodePacket.
@@ -80,10 +75,17 @@ func (p *ArtTimeCodePacket) UnmarshalBinary(b []byte) error {
 	return p.validate()
 }
 
-// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+// validate is used to validate the Packet.
 func (p *ArtTimeCodePacket) validate() error {
 	if p.OpCode != code.OpTimeCode {
 		return errInvalidOpCode
 	}
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *ArtTimeCodePacket) finish() {
+	p.OpCode = code.OpTimeCode
+	p.version = version.Bytes()
+	p.id = ArtNet
 }

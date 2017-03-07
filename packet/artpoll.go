@@ -56,22 +56,17 @@ type ArtPollPacket struct {
 
 // NewArtPollPacket returns an ArtNetPacket with the correct OpCode
 func NewArtPollPacket() *ArtPollPacket {
-	return &ArtPollPacket{
-		Header: Header{
-			OpCode: code.OpPoll,
-			id:     ArtNet,
-		},
-		version: version.Bytes(),
-	}
+	return &ArtPollPacket{}
 }
 
 // MarshalBinary marshals an ArtPollPacket into a byte slice.
 func (p *ArtPollPacket) MarshalBinary() ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), p.validate()
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollPacket.
@@ -80,10 +75,17 @@ func (p *ArtPollPacket) UnmarshalBinary(b []byte) error {
 	return p.validate()
 }
 
-// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+// validate is used to validate the Packet.
 func (p *ArtPollPacket) validate() error {
 	if p.OpCode != code.OpPoll {
 		return errInvalidOpCode
 	}
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *ArtPollPacket) finish() {
+	p.OpCode = code.OpPoll
+	p.id = ArtNet
+	p.version = version.Bytes()
 }

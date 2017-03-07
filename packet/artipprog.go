@@ -59,22 +59,17 @@ type ArtIPProgPacket struct {
 
 // NewArtIPProgPacket returns an ArtNetPacket with the correct OpCode
 func NewArtIPProgPacket() *ArtIPProgPacket {
-	return &ArtIPProgPacket{
-		Header: Header{
-			OpCode: code.OpIPProg,
-			id:     ArtNet,
-		},
-		version: version.Bytes(),
-	}
+	return &ArtIPProgPacket{}
 }
 
 // MarshalBinary marshals an ArtIPProgPacket into a byte slice.
 func (p *ArtIPProgPacket) MarshalBinary() ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), p.validate()
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtIPProgPacket.
@@ -83,10 +78,17 @@ func (p *ArtIPProgPacket) UnmarshalBinary(b []byte) error {
 	return p.validate()
 }
 
-// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+// validate is used to validate the Packet.
 func (p *ArtIPProgPacket) validate() error {
 	if p.OpCode != code.OpIPProg {
 		return errInvalidOpCode
 	}
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *ArtIPProgPacket) finish() {
+	p.OpCode = code.OpIPProg
+	p.id = ArtNet
+	p.version = version.Bytes()
 }
