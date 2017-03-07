@@ -121,163 +121,101 @@ type ArtPollReplyPacket struct {
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
 func NewArtPollReplyPacket() *ArtPollReplyPacket {
-	return &ArtPollReplyPacket{}
+	return &ArtPollReplyPacket{
+		Packet: Packet{
+			OpCode: code.OpPoll,
+			id:     ArtNet,
+		},
+	}
 }
 
 // MarshalBinary marshals an ArtPollReplyPacket into a byte slice.
 // TODO
 func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
-	return nil, nil
+	return nil, p.validate()
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
 func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
-
-	if len(b) != 228 {
-		//header size is 10, so add that to error msg to prevent confusion
-		return fmt.Errorf("invalid packet length received. want: 238, got: %d", len(b)+10)
+	if err := p.Packet.unmarshalHeader(b[:10]); err != nil {
+		return err
+	}
+	if len(b) != 238 {
+		return fmt.Errorf("invalid packet length received. want: 238, got: %d", len(b))
 	}
 
-	p.IPAddress = b[0:4]
-	p.Port = uint16(b[4]) | uint16(b[5])<<8
-	p.VersionInfo = uint16(b[6]) | uint16(b[7])<<8
+	p.IPAddress = b[10:14]
+	p.Port = uint16(b[14]) | uint16(b[15])<<8
+	p.VersionInfo = uint16(b[16]) | uint16(b[17])<<8
 
-	p.NetSwitch = b[8]
-	p.SubSwitch = b[9]
-	p.Oem = uint16(b[10]) | uint16(b[11])<<8
+	p.NetSwitch = b[18]
+	p.SubSwitch = b[19]
+	p.Oem = uint16(b[20]) | uint16(b[21])<<8
 
-	p.UBEAVersion = b[12]
-	p.Status1 = b[13]
-	p.ESTAmanufacturer = uint16(b[14]) | uint16(b[15])<<8
+	p.UBEAVersion = b[22]
+	p.Status1 = b[23]
+	p.ESTAmanufacturer = uint16(b[24]) | uint16(b[25])<<8
 
-	for _, c := range b[16:34] {
+	for _, c := range b[26:44] {
 		if c == 0x00 {
 			break
 		}
 		p.ShortName += string(c)
 	}
 
-	for _, c := range b[34:98] {
+	for _, c := range b[44:108] {
 		if c == 0x00 {
 			break
 		}
 		p.LongName += string(c)
 	}
 
-	for i, r := range b[98:162] {
+	for i, r := range b[108:172] {
 		p.NodeReport[i] = code.NodeReportCode(r)
 	}
 
-	p.NumPorts = uint16(b[162]) | uint16(b[163])<<8
-	for i, r := range b[164:168] {
+	p.NumPorts = uint16(b[172]) | uint16(b[173])<<8
+	for i, r := range b[174:178] {
 		p.PortTypes[i] = r
 	}
 
-	for i, r := range b[168:172] {
+	for i, r := range b[178:182] {
 		p.GoodInput[i] = r
 	}
 
-	for i, r := range b[172:176] {
+	for i, r := range b[182:186] {
 		p.GoodOutput[i] = r
 	}
 
-	for i, r := range b[176:180] {
+	for i, r := range b[186:190] {
 		p.SwIn[i] = r
 	}
 
-	for i, r := range b[180:184] {
+	for i, r := range b[190:194] {
 		p.SwOut[i] = r
 	}
-	p.SwVideo = b[184]
-	p.SwMacro = b[185]
-	p.SwRemote = b[186]
-	p.spare = [3]byte{b[187], b[188], b[189]}
-	p.Style = b[190]
+	p.SwVideo = b[194]
+	p.SwMacro = b[195]
+	p.SwRemote = b[196]
+	p.spare = [3]byte{b[197], b[198], b[199]}
+	p.Style = b[200]
 
-	p.Macaddress = b[190:196]
-	p.BindIP = b[196:200]
-	p.BindIndex = b[200]
-	p.Status2 = b[201]
+	p.Macaddress = b[200:206]
+	p.BindIP = b[206:210]
+	p.BindIndex = b[210]
+	p.Status2 = b[211]
 
 	for i := 0; i < 26; i++ {
-		p.filler[i] = b[202+i]
+		p.filler[i] = b[212+i]
 	}
 
+	return p.validate()
+}
+
+// artPacket is an empty method to sattisfy the ArtNetPacket interface.
+func (p *ArtPollReplyPacket) validate() error {
+	if p.OpCode != code.OpPollReply {
+		return errInvalidOpCode
+	}
 	return nil
-}
-
-// TalkToMe sets the behaviour of a Node
-// only bits 1-4 matter, rest is zero
-type TalkToMe uint8
-
-// WithReplyOnChange allows the Controller to be informed of changes
-// without the need to continuously poll.
-func (t TalkToMe) WithReplyOnChange(enable bool) TalkToMe {
-
-	if enable {
-		return t | (1 << 1)
-	}
-	return t | (0 << 1)
-}
-
-// ReplyOnChange returns the status of the bit 1
-func (t TalkToMe) ReplyOnChange() bool {
-	return t&(1<<1) > 0
-}
-
-// WithDiagnostics sends diagnostics messages
-func (t TalkToMe) WithDiagnostics(enable bool) TalkToMe {
-	if enable {
-		return t | (1 << 2)
-	}
-	return t | (0 << 2)
-}
-
-// Diagnostics returns the stats of the bit 2
-func (t TalkToMe) Diagnostics() bool {
-	return t&(1<<2) > 0
-}
-
-// WithDiagUnicast determines wether diagnostics messages are unicast or broadcast
-func (t TalkToMe) WithDiagUnicast(enable bool) TalkToMe {
-	if enable {
-		return t | (1 << 3)
-	}
-	return t | (0 << 3)
-}
-
-// DiagUnicast returns the stats of the bit 3
-func (t TalkToMe) DiagUnicast() bool {
-	return t&(1<<3) > 0
-}
-
-// WithVLC enable or disable VLC transmission
-func (t TalkToMe) WithVLC(enable bool) TalkToMe {
-	if enable {
-		return t | (1 << 4)
-	}
-	return t | (0 << 4)
-}
-
-// VLC returns the stats of the bit 4
-func (t TalkToMe) VLC() bool {
-	return t&(1<<4) > 0
-}
-
-// String returns a string representation of TalkToMe
-func (t TalkToMe) String() string {
-	roc, diag, uni, vlc := "no", "no", "no", "no"
-	if t.ReplyOnChange() {
-		roc = "yes"
-	}
-	if t.Diagnostics() {
-		diag = "yes"
-	}
-	if t.DiagUnicast() {
-		uni = "yes"
-	}
-	if t.VLC() {
-		vlc = "yes"
-	}
-	return "TalkToMe: ReplyOnChange: " + roc + ", Diagnostics: " + diag + " (as unicast: " + uni + "), VLC: " + vlc
 }

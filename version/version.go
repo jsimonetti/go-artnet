@@ -7,8 +7,8 @@ const Version ProtocolVersion = 0x1400
 type ProtocolVersion uint16
 
 // Bytes returns the ProtocolVersion high bit first.
-func Bytes() []byte {
-	return []byte{
+func Bytes() [2]byte {
+	return [2]byte{
 		uint8(Version & 0xff),
 		uint8(Version >> 8),
 	}

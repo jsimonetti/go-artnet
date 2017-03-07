@@ -4,7 +4,7 @@ package code
 
 import "fmt"
 
-const _NodeReportCode_name = "RcDebugRcPowerOkRcPowerFailRcSocketWr1RcParseFailRcUdpFailRcShNameOkRcLoNameOkRcDmxErrorRcDmxUdpFullRcDmxRxFullRcSwitchErrRcConfigErrRcDmxShortRcFirmwareFailRcUserFailRcFactoryRes"
+const _NodeReportCode_name = "RcDebugRcPowerOkRcPowerFailRcSocketWr1RcParseFailRcUDPFailRcShNameOkRcLoNameOkRcDmxErrorRcDmxUDPFullRcDmxRxFullRcSwitchErrRcConfigErrRcDmxShortRcFirmwareFailRcUserFailRcFactoryRes"
 
 var _NodeReportCode_index = [...]uint8{0, 7, 16, 27, 38, 49, 58, 68, 78, 88, 100, 111, 122, 133, 143, 157, 167, 179}
 
