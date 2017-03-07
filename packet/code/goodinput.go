@@ -81,7 +81,7 @@ func (s GoodInput) Data() bool {
 	return s&(1<<7) > 0
 }
 
-// String returns a string representation of TalkToMe
+// String returns a string representation of GoodInput
 func (s GoodInput) String() string {
 	receive, disabled, text, sip, test, data := "no", "no", "no", "no", "no", "no"
 	if s.Receive() {

@@ -107,7 +107,7 @@ func (s GoodOutput) Data() bool {
 	return s&(1<<7) > 0
 }
 
-// String returns a string representation of TalkToMe
+// String returns a string representation of GoodOutput
 func (s GoodOutput) String() string {
 	acn, ltp, output, merging, text, sip, test, data := "no", "no", "no", "no", "no", "no", "no", "no"
 	if s.LTP() {
@@ -135,5 +135,5 @@ func (s GoodOutput) String() string {
 		data = "yes"
 	}
 
-	return "GoodInput: OutputACN: " + acn + ", LTPMergeMode: " + ltp + ", OutputShort: " + output + ", Merging: " + merging + ", DMX512Text: " + text + ", DMX512SIP: " + sip + ", DMX512Test: " + test + ", DataReceived: " + data
+	return "GoodOutput: OutputACN: " + acn + ", LTPMergeMode: " + ltp + ", OutputShort: " + output + ", Merging: " + merging + ", DMX512Text: " + text + ", DMX512SIP: " + sip + ", DMX512Test: " + test + ", DataReceived: " + data
 }

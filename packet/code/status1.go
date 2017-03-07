@@ -7,7 +7,6 @@ type Status1 uint8
 // false: UBEA not present or corrupt
 // true:  UBEA present
 func (s Status1) WithUBEA(enable bool) Status1 {
-
 	if enable {
 		return s | (1 << 0)
 	}
@@ -23,7 +22,6 @@ func (s Status1) UBEA() bool {
 // false: Not capable of Remote Device Management (RDM).
 // true:  Capable of Remote Device Management (RDM).
 func (s Status1) WithRDM(enable bool) Status1 {
-
 	if enable {
 		return s | (1 << 1)
 	}
@@ -39,7 +37,6 @@ func (s Status1) RDM() bool {
 // false: Normal firmware boot (from flash). Nodes that do not support dual boot, clear this field to zero.
 // true:  Booted from ROM.
 func (s Status1) WithBootROM(enable bool) Status1 {
-
 	if enable {
 		return s | (1 << 2)
 	}
@@ -127,7 +124,7 @@ func (s Status1) Indicator() string {
 	return "error"
 }
 
-// String returns a string representation of TalkToMe
+// String returns a string representation of Status1
 func (s Status1) String() string {
 	ubea, rdm, rom := "no", "no", "no"
 	if s.UBEA() {
@@ -141,5 +138,6 @@ func (s Status1) String() string {
 	}
 	portAddr := s.PortAddr()
 	indicator := s.Indicator()
+
 	return "Status1: UBEA: " + ubea + ", RDM: " + rdm + ", BootRom: " + rom + ", PortAddr: " + portAddr + ", Indicator: " + indicator
 }

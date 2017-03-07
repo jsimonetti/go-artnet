@@ -7,7 +7,6 @@ type TalkToMe uint8
 // WithReplyOnChange allows the Controller to be informed of changes
 // without the need to continuously poll.
 func (t TalkToMe) WithReplyOnChange(enable bool) TalkToMe {
-
 	if enable {
 		return t | (1 << 1)
 	}
@@ -73,5 +72,6 @@ func (t TalkToMe) String() string {
 	if t.VLC() {
 		vlc = "yes"
 	}
+
 	return "TalkToMe: ReplyOnChange: " + roc + ", Diagnostics: " + diag + " (as unicast: " + uni + "), VLC: " + vlc
 }

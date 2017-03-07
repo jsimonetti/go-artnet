@@ -5,7 +5,6 @@ type Status2 uint8
 
 // WithBrowser sets if product supports web browser configuration
 func (s Status2) WithBrowser(enable bool) Status2 {
-
 	if enable {
 		return s | (1 << 0)
 	}
@@ -19,7 +18,6 @@ func (s Status2) Browser() bool {
 
 // WithDHCP sets if product IP is DHCP configured
 func (s Status2) WithDHCP(enable bool) Status2 {
-
 	if enable {
 		return s | (1 << 1)
 	}
@@ -33,7 +31,6 @@ func (s Status2) DHCP() bool {
 
 // WithDHCPCapable sets if product is capable of DHCP
 func (s Status2) WithDHCPCapable(enable bool) Status2 {
-
 	if enable {
 		return s | (1 << 2)
 	}
@@ -47,7 +44,6 @@ func (s Status2) DHCPCapable() bool {
 
 // WithPort15 sets if product supports 15 bit Port-Address (Art-Net 3 or 4)
 func (s Status2) WithPort15(enable bool) Status2 {
-
 	if enable {
 		return s | (1 << 3)
 	}
@@ -61,7 +57,6 @@ func (s Status2) Port15() bool {
 
 // WithSwitch sets if product is able to switch between Art-Net and sACN
 func (s Status2) WithSwitch(enable bool) Status2 {
-
 	if enable {
 		return s | (1 << 4)
 	}
@@ -75,7 +70,6 @@ func (s Status2) Switch() bool {
 
 // WithSquawk sets if product is squawking
 func (s Status2) WithSquawk(enable bool) Status2 {
-
 	if enable {
 		return s | (1 << 5)
 	}
@@ -87,7 +81,7 @@ func (s Status2) Squawk() bool {
 	return s&(1<<5) > 0
 }
 
-// String returns a string representation of TalkToMe
+// String returns a string representation of Status2
 func (s Status2) String() string {
 	browser, dhcp, dhcpcap, port15, swtch, squawk := "no", "no", "no", "no", "no", "no"
 	if s.Browser() {
