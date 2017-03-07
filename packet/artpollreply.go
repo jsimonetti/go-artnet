@@ -58,7 +58,7 @@ type ArtPollReplyPacket struct {
 	// ESTAmanufacturer contains a code used to represent equipment manufacturer.
 	// They are assigned by ESTA. This field can be interpreted as two ASCII bytes
 	// representing the manufacturer initials.
-	ESTAmanufacturer string
+	ESTAmanufacturer [2]byte
 
 	// ShortName for the Node. The Controller uses the ArtAddress packet to program this
 	// string. Max length is 17 characters. This is a fixed length field, although the string
@@ -170,13 +170,7 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	p.UBEAVersion = b[22]
 	p.Status1 = code.Status1(b[23])
 
-	man := []byte{uint8(b[24] & 0xff), uint8(uint16(b[25]) << 8)}
-	for _, c := range man {
-		if c == 0x00 {
-			break
-		}
-		p.ESTAmanufacturer += string(c)
-	}
+	p.ESTAmanufacturer = [2]byte{uint8(b[24] & 0xff), uint8(uint16(b[25]) << 8)}
 
 	for _, c := range b[26:44] {
 		if c == 0x00 {
