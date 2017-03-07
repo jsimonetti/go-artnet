@@ -123,7 +123,7 @@ type ArtPollReplyPacket struct {
 func NewArtPollReplyPacket() *ArtPollReplyPacket {
 	return &ArtPollReplyPacket{
 		Header: Header{
-			OpCode: code.OpPoll,
+			OpCode: code.OpPollReply,
 			id:     ArtNet,
 		},
 	}
