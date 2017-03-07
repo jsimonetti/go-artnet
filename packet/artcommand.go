@@ -27,6 +27,11 @@ var _ ArtNetPacket = &ArtCommandPacket{}
 // anticipated that additional commands will be added as other manufacturers register commands
 // which have industry wide relevance. These commands shall be transmitted with EstaMan = 0xFFFF.
 //
+// SwoutText - This command is used to re-programme the label associated with the
+//             ArtPollReply->Swout fields. Syntax: "SwoutText=Playback&"
+// SwinText  - This command is used to re-programme the label associated with the
+//             ArtPollReply->Swin fields. Syntax: "SwinText=Record&"
+//
 // Packet Strategy:
 //  Controller -  Receive:            Application Specific
 //                Unicast Transmit:   Application Specific
