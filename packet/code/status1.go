@@ -3,7 +3,7 @@ package code
 // Status1 is a general Status register containing bit fields.
 type Status1 uint8
 
-// WithUBEA
+// WithUBEA sets the presence of UBEA
 // false: UBEA not present or corrupt
 // true:  UBEA present
 func (s Status1) WithUBEA(enable bool) Status1 {
@@ -18,7 +18,7 @@ func (s Status1) UBEA() bool {
 	return s&(1<<0) > 0
 }
 
-// WithRDM
+// WithRDM sets the capability of the node for RDM
 // false: Not capable of Remote Device Management (RDM).
 // true:  Capable of Remote Device Management (RDM).
 func (s Status1) WithRDM(enable bool) Status1 {
@@ -33,8 +33,9 @@ func (s Status1) RDM() bool {
 	return s&(1<<1) > 0
 }
 
-// WithBootROM
-// false: Normal firmware boot (from flash). Nodes that do not support dual boot, clear this field to zero.
+// WithBootROM sets the boot location
+// false: Normal firmware boot (from flash). Nodes that do not support dual boot,
+//        clear this field to zero.
 // true:  Booted from ROM.
 func (s Status1) WithBootROM(enable bool) Status1 {
 	if enable {

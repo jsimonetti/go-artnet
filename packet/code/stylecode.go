@@ -5,7 +5,7 @@ package code
 // StyleCode defines the class of data following an UDP packet.
 type StyleCode uint8
 
-// Valid returns wether the OpCode is valid
+// ValidStyle returns wether the OpCode is valid
 func ValidStyle(o StyleCode) bool {
 	if o >= StyleCode(len(_StyleCode_index)-1) {
 		return false
