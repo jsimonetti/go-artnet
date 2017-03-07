@@ -20,8 +20,14 @@ var _ ArtNetPacket = &ArtPollReplyPacket{}
 //                Unicast Transmit:   Not Allowed.
 //                Broadcast Transmit: Directed Broadcasts this packet in response to an ArtPoll.
 type ArtPollReplyPacket struct {
-	// Inherit the Header header
-	Header
+	// ID is an Array of 8 characters, the final character is a null termination.
+	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
+	// ArtPollReply is the only packet not containing version, so do this here
+	id [8]byte
+
+	// OpCode defines the class of data following within this UDP packet.
+	// Transmitted low byte first.
+	OpCode code.OpCode
 
 	// IPAddress is the Node’s IPv4 address. When binding is implemented, bound nodes may
 	// share the root node’s IP Address and the BindIndex is used to differentiate the nodes.
@@ -136,7 +142,6 @@ func NewArtPollReplyPacket() *ArtPollReplyPacket {
 }
 
 // MarshalBinary marshals an ArtPollReplyPacket into a byte slice.
-// TODO
 func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 	p.finish()
 	var buf bytes.Buffer
@@ -148,12 +153,17 @@ func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
 func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
-	if err := p.Header.unmarshal(b[:10]); err != nil {
-		return err
+	if len(b) < 10 {
+		return errIncorrectHeaderLength
 	}
 	if len(b) != 238 {
 		return fmt.Errorf("invalid packet length received. want: 238, got: %d", len(b))
 	}
+	if !bytes.Equal(b[0:8], ArtNet[:]) {
+		return errInvalidPacket
+	}
+	p.id = ArtNet
+	p.OpCode = code.OpCode(uint16(b[8] + b[9]))
 
 	p.IPAddress = [4]byte{b[10], b[11], b[12], b[13]}
 	p.Port = uint16(b[14]) | uint16(b[15])<<8

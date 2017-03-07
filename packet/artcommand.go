@@ -46,9 +46,6 @@ type ArtCommandPacket struct {
 	// Inherit the Header header
 	Header
 
-	// this packet type contains a version
-	version [2]byte
-
 	// estamanufacturer contains a code used to represent equipment manufacturer.
 	estamanufacturer [2]byte
 

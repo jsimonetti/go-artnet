@@ -31,9 +31,6 @@ type ArtIPProgPacket struct {
 	// Inherit the Header header
 	Header
 
-	// this packet type contains a version
-	version [2]byte
-
 	// filler to pad to same length as ArtPoll
 	filler [2]byte
 

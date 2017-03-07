@@ -56,9 +56,6 @@ type ArtTriggerPacket struct {
 	// Inherit the Header header
 	Header
 
-	// this packet type contains a version
-	version [2]byte
-
 	// filler bytes
 	filler [2]byte
 

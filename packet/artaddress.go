@@ -33,9 +33,6 @@ type ArtAddressPacket struct {
 	// Inherit the Header header
 	Header
 
-	// this packet type contains a version
-	version [2]byte
-
 	// NetSwitch contains Bits 14-8 of the 15 bit Port-Address are encoded into the bottom 7
 	// bits of this field. This is used in combination with SubSwitch and SwIn[] or SwOut[]
 	// to produce the full universe address.

@@ -44,9 +44,6 @@ type ArtPollPacket struct {
 	// Inherit the Header header
 	Header
 
-	// this packet type contains a version
-	version [2]byte
-
 	// TalkToMe defines the behavior of the Node
 	TalkToMe code.TalkToMe
 

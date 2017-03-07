@@ -37,6 +37,9 @@ type Header struct {
 	// OpCode defines the class of data following within this UDP packet.
 	// Transmitted low byte first.
 	OpCode code.OpCode
+
+	// this packet type contains a version
+	version [2]byte
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into a Packet.

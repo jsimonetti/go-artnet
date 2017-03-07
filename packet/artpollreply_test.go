@@ -17,9 +17,8 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 		{
 			name: "Empty",
 			p: ArtPollReplyPacket{
-				Header: Header{
-					OpCode: code.OpPollReply,
-				},
+				id:        ArtNet,
+				OpCode:    code.OpPollReply,
 				ShortName: "",
 				LongName:  "",
 			},
@@ -59,9 +58,8 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 		{
 			name: "WithInfo",
 			p: ArtPollReplyPacket{
-				Header: Header{
-					OpCode: code.OpPollReply,
-				},
+				id:         ArtNet,
+				OpCode:     code.OpPollReply,
 				IPAddress:  [4]byte{0x0a, 0x01, 0x01, 0x01},
 				ShortName:  "ABC",
 				LongName:   "ABCDEFGHIJKLMNOPQRSTUVWXYZ",

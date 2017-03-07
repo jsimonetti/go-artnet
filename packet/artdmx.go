@@ -43,9 +43,6 @@ type ArtDMXPacket struct {
 	// Inherit the Header header
 	Header
 
-	// this packet type contains a version
-	version [2]byte
-
 	// Sequence number is used to ensure that ArtDmx packets are used in the correct order.
 	// When Art-Net is carried over a medium such as the Internet, it is possible that ArtDmx packets
 	// will reach the receiver out of order.

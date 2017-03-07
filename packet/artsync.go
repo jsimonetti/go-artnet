@@ -34,9 +34,6 @@ type ArtSyncPacket struct {
 	// Inherit the Header header
 	Header
 
-	// this packet type contains a version
-	version [2]byte
-
 	// aux are auxiliary bytes transmitted as zero
 	aux [2]byte
 }

@@ -32,9 +32,6 @@ type ArtTimeCodePacket struct {
 	// Inherit the Header header
 	Header
 
-	// this packet type contains a version
-	version [2]byte
-
 	// filler1
 	filler1 [2]byte
 
