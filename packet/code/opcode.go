@@ -1,5 +1,6 @@
-//go:generate stringer -type=OpCode
 package code
+
+//go:generate stringer -type=OpCode
 
 import "fmt"
 

@@ -1,5 +1,6 @@
-//go:generate stringer -type=NodeReportCode
 package code
+
+//go:generate stringer -type=NodeReportCode
 
 // NodeReportCode defines generic error, advisory and status messages for both Nodes and Controllers
 type NodeReportCode uint8

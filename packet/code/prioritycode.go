@@ -1,5 +1,6 @@
-//go:generate stringer -type=PriorityCode
 package code
+
+//go:generate stringer -type=PriorityCode
 
 // PriorityCode defines Diagnostics Priority codes. These are used in ArtPoll and ArtDiagData
 type PriorityCode uint8
