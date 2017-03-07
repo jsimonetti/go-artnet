@@ -50,10 +50,10 @@ type ArtIPProgPacket struct {
 	// ProgSubNet is Subnet mask to be programmed into Node if enabled by Command Field
 	ProgSubNet [4]byte
 
-	//ProgPort is deprecated
+	// ProgPort is deprecated
 	ProgPort [2]byte
 
-	//spare bytes, transmit as zero, receivers don’t test.
+	// spare bytes, transmit as zero, receivers don’t test.
 	spare [8]byte
 }
 
@@ -61,7 +61,7 @@ type ArtIPProgPacket struct {
 func NewArtIPProgPacket() *ArtIPProgPacket {
 	return &ArtIPProgPacket{
 		Header: Header{
-			OpCode: code.OpPoll,
+			OpCode: code.OpIPProg,
 			id:     ArtNet,
 		},
 		version: version.Bytes(),

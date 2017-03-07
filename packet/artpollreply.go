@@ -1,6 +1,8 @@
 package packet
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
@@ -141,7 +143,11 @@ func NewArtPollReplyPacket() *ArtPollReplyPacket {
 // MarshalBinary marshals an ArtPollReplyPacket into a byte slice.
 // TODO
 func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
-	return nil, p.validate()
+	var buf bytes.Buffer
+	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), p.validate()
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
