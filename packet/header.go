@@ -14,6 +14,7 @@ var (
 	errIncorrectHeaderLength = errors.New("header length incorrect")
 	errInvalidPacket         = errors.New("invalid Art-Net packet")
 	errInvalidOpCode         = errors.New("invalid OpCode in packet")
+	errInvalidStyle          = errors.New("invalid StyleCode in packet")
 )
 
 // ArtNetPacket is the interface used for passing around different kinds of ArtNet packets.

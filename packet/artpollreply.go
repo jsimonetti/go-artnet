@@ -224,5 +224,8 @@ func (p *ArtPollReplyPacket) validate() error {
 	if p.OpCode != code.OpPollReply {
 		return errInvalidOpCode
 	}
+	if !code.ValidStyle(p.Style) {
+		return errInvalidStyle
+	}
 	return nil
 }
