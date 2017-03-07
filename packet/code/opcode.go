@@ -5,8 +5,8 @@ package code
 // OpCode defines the class of data following an UDP packet.
 type OpCode uint16
 
-// Valid returns wether the OpCode is valid
-func Valid(o OpCode) bool {
+// ValidOp returns wether the OpCode is valid
+func ValidOp(o OpCode) bool {
 	_, ok := _OpCode_map[o]
 	return ok
 }

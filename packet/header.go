@@ -50,7 +50,7 @@ func (p *Header) unmarshal(b []byte) error {
 }
 
 func (p *Header) validate() error {
-	if !code.Valid(p.OpCode) {
+	if !code.ValidOp(p.OpCode) {
 		return errInvalidOpCode
 	}
 	return nil

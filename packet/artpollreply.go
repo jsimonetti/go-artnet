@@ -43,13 +43,13 @@ type ArtPollReplyPacket struct {
 	// If the UBEA is not programmed, this field contains zero.
 	UBEAVersion uint8
 
-	// TODO
-	Status1 uint8
+	// Status1 indicates General Status register containing bit fields as follows.
+	Status1 code.Status1
 
 	// ESTAmanufacturer contains a code used to represent equipment manufacturer.
 	// They are assigned by ESTA. This field can be interpreted as two ASCII bytes
 	// representing the manufacturer initials.
-	ESTAmanufacturer uint16
+	ESTAmanufacturer string
 
 	// ShortName for the Node. The Controller uses the ArtAddress packet to program this
 	// string. Max length is 17 characters. This is a fixed length field, although the string
@@ -100,7 +100,7 @@ type ArtPollReplyPacket struct {
 	spare [3]byte
 
 	// Style code defines the equipment style of the device.
-	Style uint8
+	Style code.StyleCode
 
 	// Macaddress of the Node. Set to zero if node cannot supply this information.
 	Macaddress net.HardwareAddr
@@ -112,8 +112,8 @@ type ArtPollReplyPacket struct {
 	// A value of 1 means root device.
 	BindIndex uint8
 
-	//TODO
-	Status2 uint8
+	// Status2 indicates Product capabilities
+	Status2 code.Status2
 
 	// filler bytes. Transmit as zero. For future expansion.
 	filler [26]byte
@@ -153,8 +153,15 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	p.Oem = uint16(b[20]) | uint16(b[21])<<8
 
 	p.UBEAVersion = b[22]
-	p.Status1 = b[23]
-	p.ESTAmanufacturer = uint16(b[24]) | uint16(b[25])<<8
+	p.Status1 = code.Status1(b[23])
+
+	man := []byte{uint8(b[24] & 0xff), uint8(uint16(b[25]) << 8)}
+	for _, c := range man {
+		if c == 0x00 {
+			break
+		}
+		p.ESTAmanufacturer += string(c)
+	}
 
 	for _, c := range b[26:44] {
 		if c == 0x00 {
@@ -198,12 +205,12 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	p.SwMacro = b[195]
 	p.SwRemote = b[196]
 	p.spare = [3]byte{b[197], b[198], b[199]}
-	p.Style = b[200]
+	p.Style = code.StyleCode(b[200])
 
 	p.Macaddress = b[200:206]
 	p.BindIP = b[206:210]
 	p.BindIndex = b[210]
-	p.Status2 = b[211]
+	p.Status2 = code.Status2(b[211])
 
 	for i := 0; i < 26; i++ {
 		p.filler[i] = b[212+i]
