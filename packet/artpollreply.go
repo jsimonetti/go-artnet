@@ -2,7 +2,6 @@ package packet
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
@@ -10,13 +9,21 @@ import (
 var _ ArtNetPacket = &ArtPollReplyPacket{}
 
 // ArtPollReplyPacket contains an ArtPollReply Packet.
+//
+// A device, in response to a Controller’s ArtPoll, sends the ArtPollReply. This packet
+// is also broadcast to the Directed Broadcast address by all Art-Net devices on power up.
+//
+// Packet Strategy:
+//  All devices - Receive:            No Art-Net action.
+//                Unicast Transmit:   Not Allowed.
+//                Broadcast Transmit: Directed Broadcasts this packet in response to an ArtPoll.
 type ArtPollReplyPacket struct {
 	// Inherit the Header header
 	Header
 
 	// IPAddress is the Node’s IPv4 address. When binding is implemented, bound nodes may
 	// share the root node’s IP Address and the BindIndex is used to differentiate the nodes.
-	IPAddress net.IP
+	IPAddress [4]byte
 
 	// Port is always 0x1936 Transmitted low byte first.
 	Port uint16
@@ -105,10 +112,10 @@ type ArtPollReplyPacket struct {
 	Style code.StyleCode
 
 	// Macaddress of the Node. Set to zero if node cannot supply this information.
-	Macaddress net.HardwareAddr
+	Macaddress [6]byte
 
 	// BindIP is the IP of the root device if this unit is part of a larger or modular product.
-	BindIP net.IP
+	BindIP [4]byte
 
 	// BindIndex represents the order of bound devices. A lower number means closer to root device.
 	// A value of 1 means root device.
@@ -146,7 +153,7 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 		return fmt.Errorf("invalid packet length received. want: 238, got: %d", len(b))
 	}
 
-	p.IPAddress = b[10:14]
+	p.IPAddress = [4]byte{b[10], b[11], b[12], b[13]}
 	p.Port = uint16(b[14]) | uint16(b[15])<<8
 	p.VersionInfo = uint16(b[16]) | uint16(b[17])<<8
 
@@ -209,8 +216,8 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	p.spare = [3]byte{b[197], b[198], b[199]}
 	p.Style = code.StyleCode(b[200])
 
-	p.Macaddress = b[200:206]
-	p.BindIP = b[206:210]
+	p.Macaddress = [6]byte{b[200], b[201], b[202], b[203], b[204], b[205]}
+	p.BindIP = [4]byte{b[206], b[207], b[208], b[209]}
 	p.BindIndex = b[210]
 	p.Status2 = code.Status2(b[211])
 
