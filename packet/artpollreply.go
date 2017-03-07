@@ -80,10 +80,12 @@ type ArtPollReplyPacket struct {
 	// GoodOutput defines output status of the node
 	GoodOutput [4]code.GoodOutput
 
-	// TODO (4x uint8, array)
+	// SwIn Bits 3-0 of the 15 bit Port-Address for each of the 4
+	// possible input ports are encoded into the low nibble
 	SwIn [4]uint8
 
-	// TODO (4x uint8, array)
+	// SwOut Bits 3-0 of the 15 bit Port-Address for each of the 4
+	// possible output ports are encoded into the low nibble.
 	SwOut [4]uint8
 
 	// SwVideo is set to 00 when video display is showing local data. Set to 01 when video
@@ -91,10 +93,10 @@ type ArtPollReplyPacket struct {
 	SwVideo uint8
 
 	// SwMacro shows if the Node supports macro key inputs, this byte represents the trigger values.
-	SwMacro uint8
+	SwMacro code.SwMacro
 
 	// SwRemote show if the Node supports remote trigger inputs, this byte represents the trigger values.
-	SwRemote uint8
+	SwRemote code.SwRemote
 
 	// spare bytes
 	spare [3]byte
@@ -202,8 +204,8 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 		p.SwOut[i] = r
 	}
 	p.SwVideo = b[194]
-	p.SwMacro = b[195]
-	p.SwRemote = b[196]
+	p.SwMacro = code.SwMacro(b[195])
+	p.SwRemote = code.SwRemote(b[196])
 	p.spare = [3]byte{b[197], b[198], b[199]}
 	p.Style = code.StyleCode(b[200])
 
