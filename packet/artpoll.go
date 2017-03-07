@@ -1,8 +1,8 @@
 package packet
 
 import (
-	"github.com/jsimonetti/artnet/packet/code"
-	"github.com/jsimonetti/artnet/version"
+	"github.com/jsimonetti/go-artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtPollPacket{}

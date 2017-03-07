@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/jsimonetti/artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
 var _ ArtNetPacket = &ArtPollReplyPacket{}

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/jsimonetti/artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
 func TestArtPollPacketMarshal(t *testing.T) {

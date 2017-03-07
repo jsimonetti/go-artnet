@@ -5,7 +5,7 @@ import (
 	"encoding"
 	"errors"
 
-	"github.com/jsimonetti/artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
 // Various errors which may occur when attempting to marshal or unmarshal
