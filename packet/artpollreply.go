@@ -181,6 +181,16 @@ type Address struct {
 	SubUni uint8
 }
 
+// String returns a string representation of Address
+func (a Address) String() string {
+	return fmt.Sprintf("%d:%d.%d", a.Net, (a.SubUni >> 4), a.SubUni&0x0f)
+}
+
+// Integer returns the integer representation of Address
+func (a Address) Integer() int {
+	return int(uint16(a.Net)<<8 | uint16(a.SubUni))
+}
+
 // InputPort contains information for an input port
 type InputPort struct {
 	Address Address
