@@ -72,8 +72,8 @@ func (p *Header) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *Header) finish() {
-	p.OpCode = code.OpCode(uint16(p.OpCode&0xff) + uint16(p.OpCode>>8))
 	p.ID = ArtNet
+	p.OpCode = code.OpCode(uint16(p.OpCode&0xff) + uint16(p.OpCode>>8))
 	p.Version = version.Bytes()
 }
 
@@ -95,5 +95,5 @@ func unmarshalPacket(p ArtNetPacket, b []byte) error {
 }
 
 func swapUint16(x uint16) uint16 {
-	return uint16(x>>8) + uint16(x<<8)
+	return x>>8 + x<<8
 }
