@@ -3,9 +3,12 @@ package packet
 import (
 	"bytes"
 	"encoding"
+	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/version"
 )
 
 // Various errors which may occur when attempting to marshal or unmarshal
@@ -42,21 +45,33 @@ type Header struct {
 	version [2]byte
 }
 
-// UnmarshalBinary unmarshals the contents of a byte slice into a Packet.
 func (p *Header) unmarshal(b []byte) error {
-	if len(b) < 10 {
+	if len(b) < 12 {
 		return errIncorrectHeaderLength
 	}
-	if !bytes.Equal(b[0:8], ArtNet[:]) {
-		return errInvalidPacket
-	}
+	p.id = [8]byte{b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]}
 	p.OpCode = code.OpCode(uint16(b[8] + b[9]))
+	p.version = [2]byte{b[10], b[11]}
 	return p.validate()
 }
 
 func (p *Header) validate() error {
+	if p.id != ArtNet {
+		return errInvalidPacket
+	}
 	if !code.ValidOp(p.OpCode) {
 		return errInvalidOpCode
 	}
+	if p.version[1] < version.Bytes()[1] {
+		return fmt.Errorf("incompatible version. want: 14, got: %d", p.version[1])
+	}
 	return nil
+}
+
+func marshalPacket(p ArtNetPacket) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

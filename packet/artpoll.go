@@ -1,8 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
+	"fmt"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
 	"github.com/jsimonetti/go-artnet/version"
@@ -59,16 +58,21 @@ func NewArtPollPacket() *ArtPollPacket {
 // MarshalBinary marshals an ArtPollPacket into a byte slice.
 func (p *ArtPollPacket) MarshalBinary() ([]byte, error) {
 	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollPacket.
 //TODO
 func (p *ArtPollPacket) UnmarshalBinary(b []byte) error {
+	if err := p.Header.unmarshal(b[:12]); err != nil {
+		return err
+	}
+	if len(b) != 14 {
+		return fmt.Errorf("invalid packet length received. want: 14, got: %d", len(b))
+	}
+	p.TalkToMe = code.TalkToMe(b[12])
+	p.Priority = code.PriorityCode(b[13])
+
 	return p.validate()
 }
 

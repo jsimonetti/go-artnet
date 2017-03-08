@@ -69,12 +69,12 @@ type ArtPollReplyPacket struct {
 	// ShortName for the Node. The Controller uses the ArtAddress packet to program this
 	// string. Max length is 17 characters. This is a fixed length field, although the string
 	// it contains can be shorter than the field.
-	ShortName string
+	ShortName [18]byte
 
 	// LongName for the Node. The Controller uses the ArtAddress packet to program this string.
 	// Max length is 63. This is a fixed length field, although the string it contains can be
 	// shorter than the field.
-	LongName string
+	LongName [64]byte
 
 	// NodeReport is a textual report of the Node’s operating status or operational errors.
 	// It is primarily intended for ‘engineering’ data.
@@ -144,11 +144,7 @@ func NewArtPollReplyPacket() *ArtPollReplyPacket {
 // MarshalBinary marshals an ArtPollReplyPacket into a byte slice.
 func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
@@ -156,8 +152,8 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	if len(b) < 10 {
 		return errIncorrectHeaderLength
 	}
-	if len(b) != 238 {
-		return fmt.Errorf("invalid packet length received. want: 238, got: %d", len(b))
+	if len(b) != 239 {
+		return fmt.Errorf("invalid packet length received. want: 239, got: %d", len(b))
 	}
 	if !bytes.Equal(b[0:8], ArtNet[:]) {
 		return errInvalidPacket
@@ -166,37 +162,39 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	p.OpCode = code.OpCode(uint16(b[8] + b[9]))
 
 	p.IPAddress = [4]byte{b[10], b[11], b[12], b[13]}
-	p.Port = uint16(b[14]) | uint16(b[15])<<8
-	p.VersionInfo = uint16(b[16]) | uint16(b[17])<<8
+	p.Port = binary.BigEndian.Uint16([]byte{b[14], b[15]})
+	p.VersionInfo = binary.BigEndian.Uint16([]byte{b[16], b[17]})
 
 	p.NetSwitch = b[18]
 	p.SubSwitch = b[19]
-	p.Oem = uint16(b[20]) | uint16(b[21])<<8
+	p.Oem = binary.BigEndian.Uint16([]byte{b[20], b[21]})
 
 	p.UBEAVersion = b[22]
 	p.Status1 = code.Status1(b[23])
 
-	p.ESTAmanufacturer = [2]byte{uint8(b[24] & 0xff), uint8(uint16(b[25]) << 8)}
+	p.ESTAmanufacturer = [2]byte{b[24], b[25]}
 
-	for _, c := range b[26:44] {
+	for i, c := range b[26:44] {
 		if c == 0x00 {
+			p.LongName[i] = c
 			break
 		}
-		p.ShortName += string(c)
+		p.ShortName[i] = c
 	}
 
-	for _, c := range b[44:108] {
+	for i, c := range b[44:108] {
 		if c == 0x00 {
+			p.LongName[i] = c
 			break
 		}
-		p.LongName += string(c)
+		p.LongName[i] = c
 	}
 
 	for i, r := range b[108:172] {
 		p.NodeReport[i] = code.NodeReportCode(r)
 	}
 
-	p.NumPorts = uint16(b[172]) | uint16(b[173])<<8
+	p.NumPorts = binary.BigEndian.Uint16([]byte{b[172], b[173]})
 	for i, r := range b[174:178] {
 		p.PortTypes[i] = code.PortType(r)
 	}
@@ -222,13 +220,13 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 	p.spare = [3]byte{b[197], b[198], b[199]}
 	p.Style = code.StyleCode(b[200])
 
-	p.Macaddress = [6]byte{b[200], b[201], b[202], b[203], b[204], b[205]}
-	p.BindIP = [4]byte{b[206], b[207], b[208], b[209]}
-	p.BindIndex = b[210]
-	p.Status2 = code.Status2(b[211])
+	p.Macaddress = [6]byte{b[201], b[202], b[203], b[204], b[205], b[206]}
+	p.BindIP = [4]byte{b[207], b[208], b[209], b[210]}
+	p.BindIndex = b[211]
+	p.Status2 = code.Status2(b[212])
 
 	for i := 0; i < 26; i++ {
-		p.filler[i] = b[212+i]
+		p.filler[i] = b[213+i]
 	}
 
 	return p.validate()
