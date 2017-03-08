@@ -78,6 +78,22 @@ func TestArtPollPacketMarshal(t *testing.T) {
 				0x00, 0x20, 0x00, 0x0e, 0x12, 0xf0,
 			},
 		},
+		{
+			name: "ArtNetominator",
+			p: ArtPollPacket{
+				Header: Header{
+					ID:      ArtNet,
+					OpCode:  code.OpPoll,
+					Version: [2]uint8{0x0, 0xe},
+				},
+				TalkToMe: new(code.TalkToMe).WithReplyOnChange(false),
+				Priority: code.DpAll,
+			},
+			b: []byte{
+				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00,
+				0x00, 0x20, 0x00, 0x0e, 0x00, 0x00,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -168,7 +184,7 @@ func TestArtPollPacketUnmarshal(t *testing.T) {
 			},
 		},
 		{
-			name: "LiveCapture",
+			name: "ArtNetominator",
 			p: ArtPollPacket{
 				Header: Header{
 					ID:      ArtNet,
