@@ -2,6 +2,7 @@ package packet
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
@@ -170,4 +171,95 @@ func (p *ArtPollReplyPacket) finish() {
 	p.OpCode = code.OpCode(uint16(p.OpCode>>8) | uint16(p.OpCode<<8))
 	p.ID = ArtNet
 	p.Port = ArtNetPort
+}
+
+type Address struct {
+	Net    uint8 // 0-128
+	SubUni uint8
+}
+
+type InputPort struct {
+	Address Address
+
+	Type   code.PortType
+	Status code.GoodInput
+}
+
+type OutputPort struct {
+	Address Address
+
+	Type   code.PortType
+	Status code.GoodOutput
+}
+
+type NodeConfig struct {
+	OEM          uint16
+	Version      uint16
+	BiosVersion  uint8
+	Manufacturer string
+	Type         string
+	Name         string
+	Description  string
+	Report       []code.NodeReportCode
+	Ethernet     net.HardwareAddr
+	IP           net.IP
+	BindIP       net.IP
+	BindIndex    uint8
+	Port         uint16
+	Status1      code.Status1
+	Status2      code.Status2
+
+	BaseAddress Address
+	InputPorts  []InputPort
+	OutputPorts []OutputPort
+}
+
+func (p *ArtPollReplyPacket) NodeConfig() NodeConfig {
+
+	nodeConfig := NodeConfig{
+		OEM:          p.Oem,
+		Version:      p.VersionInfo,
+		BiosVersion:  p.UBEAVersion,
+		Manufacturer: string(p.ESTAmanufacturer[:]),
+		Type:         p.Style.String(),
+		Name:         string(p.ShortName[:]),
+		Description:  string(p.LongName[:]),
+		Report:       p.NodeReport[:],
+		Ethernet:     p.Macaddress[:],
+		IP:           p.IPAddress[:],
+		BindIP:       p.BindIP[:],
+		BindIndex:    p.BindIndex,
+		Port:         p.Port,
+		Status1:      p.Status1,
+		Status2:      p.Status2,
+		BaseAddress: Address{
+			Net:    p.NetSwitch,
+			SubUni: p.SubSwitch,
+		},
+	}
+
+	for i := 0; i < int(p.NumPorts) && i < 4; i++ {
+		if p.PortTypes[i].Output() {
+			nodeConfig.OutputPorts = append(nodeConfig.OutputPorts, OutputPort{
+				Address: Address{
+					Net:    nodeConfig.BaseAddress.Net,
+					SubUni: nodeConfig.BaseAddress.SubUni | p.SwOut[i],
+				},
+				Type:   p.PortTypes[i],
+				Status: p.GoodOutput[i],
+			})
+		}
+		if p.PortTypes[i].Input() {
+			nodeConfig.InputPorts = append(nodeConfig.InputPorts, InputPort{
+				Address: Address{
+					Net:    nodeConfig.BaseAddress.Net,
+					SubUni: nodeConfig.BaseAddress.SubUni | p.SwIn[i],
+				},
+				Type:   p.PortTypes[i],
+				Status: p.GoodInput[i],
+			})
+		}
+	}
+
+	return nodeConfig
 }

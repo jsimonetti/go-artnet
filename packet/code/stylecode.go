@@ -1,13 +1,13 @@
 package code
 
-//go:generate stringer -type=StyleCode
+import "fmt"
 
 // StyleCode defines the class of data following an UDP packet.
 type StyleCode uint8
 
 // ValidStyle returns wether the OpCode is valid
 func ValidStyle(o StyleCode) bool {
-	if o >= StyleCode(len(_StyleCode_index)-1) {
+	if o >= StyleCode(len(styleCodeIndex)-1) {
 		return false
 	}
 	return true
@@ -35,3 +35,14 @@ const (
 	// StVisual A visualiser.
 	StVisual StyleCode = 0x06
 )
+
+const styleCodeName = "NodeControllerMediaRouteBackupConfigVisual"
+
+var styleCodeIndex = [...]uint8{0, 4, 14, 19, 24, 30, 36, 42}
+
+func (i StyleCode) String() string {
+	if i >= StyleCode(len(styleCodeIndex)-1) {
+		return fmt.Sprintf("StyleCode(%d)", i)
+	}
+	return styleCodeName[styleCodeIndex[i]:styleCodeIndex[i+1]]
+}

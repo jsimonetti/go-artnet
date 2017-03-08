@@ -2,6 +2,7 @@ package packet
 
 import (
 	"bytes"
+	"net"
 	"reflect"
 	"testing"
 
@@ -309,6 +310,177 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 			}
 
 			if want, got := tt.p, a; !reflect.DeepEqual(want, got) {
+				t.Fatalf("unexpected Message bytes:\n- want: [%#v]\n-  got: [%#v]", want, got)
+			}
+		})
+	}
+}
+
+func TestArtPollReplyNodeConfig(t *testing.T) {
+	tests := []struct {
+		name string
+		p    ArtPollReplyPacket
+		c    NodeConfig
+		err  error
+	}{
+		{
+			name: "Empty",
+			p: ArtPollReplyPacket{
+				ID:     ArtNet,
+				OpCode: code.OpPollReply,
+			},
+			c: NodeConfig{
+				OEM:          0x0,
+				Version:      0x0,
+				Manufacturer: "\x00\x00",
+				Type:         "Node",
+				Name:         "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+				Description: "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+					"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+					"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+				Report: []code.NodeReportCode{
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				},
+				Ethernet:    net.HardwareAddr{0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+				IP:          net.IP{0x0, 0x0, 0x0, 0x0},
+				BindIP:      net.IP{0x0, 0x0, 0x0, 0x0},
+				BaseAddress: Address{},
+				InputPorts:  []InputPort(nil),
+				OutputPorts: []OutputPort(nil),
+			},
+		},
+		{
+			name: "WithInfo",
+			p: ArtPollReplyPacket{
+				ID:               ArtNet,
+				OpCode:           code.OpPollReply,
+				IPAddress:        [4]byte{0x0a, 0x01, 0x01, 0x01},
+				Port:             ArtNetPort,
+				VersionInfo:      0xf00d,
+				NetSwitch:        0xeb,
+				SubSwitch:        0xbe,
+				Oem:              0xcccc,
+				UBEAVersion:      0xaa,
+				Status1:          new(code.Status1).WithUBEA(true),
+				ESTAmanufacturer: [2]byte{'N', 'L'},
+				ShortName:        [18]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6', '7', '8'},
+				LongName: [64]byte{
+					'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+					'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+					'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+					'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+				},
+				NodeReport: [64]code.NodeReportCode{
+					code.RcPowerOk,
+				},
+				NumPorts: 0x0004,
+				PortTypes: [4]code.PortType{
+					new(code.PortType).WithType("DMX512").WithInput(true),
+					new(code.PortType).WithType("DMX512").WithInput(true),
+					new(code.PortType).WithType("DMX512").WithOutput(true),
+					new(code.PortType).WithType("DMX512").WithOutput(true),
+				},
+				GoodInput: [4]code.GoodInput{
+					new(code.GoodInput).WithReceive(true),
+					new(code.GoodInput).WithReceive(false),
+					new(code.GoodInput).WithReceive(false),
+					new(code.GoodInput).WithReceive(false),
+				},
+				GoodOutput: [4]code.GoodOutput{
+					new(code.GoodOutput).WithACN(true),
+					new(code.GoodOutput).WithACN(false),
+					new(code.GoodOutput).WithACN(false),
+					new(code.GoodOutput).WithACN(false),
+				},
+				SwIn:       [4]uint8{0x01, 0x02, 0x03, 0x04},
+				SwOut:      [4]uint8{0x01, 0x02, 0x03, 0x04},
+				SwVideo:    0xff,
+				SwMacro:    new(code.SwMacro).WithMacro1(true),
+				SwRemote:   new(code.SwRemote).WithRemote1(true),
+				Style:      code.StController,
+				Macaddress: [6]byte{0x00, 0x50, 0x56, 0xc0, 0x00, 0x02},
+				BindIP:     [4]byte{0x0a, 0x01, 0x01, 0x01},
+				BindIndex:  0xee,
+				Status2:    new(code.Status2).WithBrowser(true),
+			},
+			c: NodeConfig{
+				OEM:          0xcccc,
+				Version:      0xf00d,
+				BiosVersion:  0xaa,
+				Manufacturer: "NL",
+				Type:         "Controller",
+				Name:         "123456789012345678",
+				Description:  "ABCDEFGHIJKLMNOPABCDEFGHIJKLMNOPABCDEFGHIJKLMNOPABCDEFGHIJKLMNOP",
+				Report: []code.NodeReportCode{
+					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				},
+				Ethernet:  net.HardwareAddr{0x0, 0x50, 0x56, 0xc0, 0x0, 0x2},
+				IP:        net.IP{0x0a, 0x01, 0x01, 0x01},
+				BindIP:    net.IP{0xa, 0x1, 0x1, 0x1},
+				BindIndex: 0xee,
+				Port:      ArtNetPort,
+				Status1:   0x1,
+				Status2:   0x1,
+				BaseAddress: Address{
+					Net:    0xeb,
+					SubUni: 0xbe,
+				},
+				InputPorts: []InputPort{
+					InputPort{
+						Address: Address{
+							Net:    0xeb,
+							SubUni: 0xbf,
+						},
+						Type:   0x47,
+						Status: 0x4,
+					},
+					InputPort{
+						Address: Address{
+							Net:    0xeb,
+							SubUni: 0xbe,
+						},
+						Type:   0x47,
+						Status: 0x0,
+					},
+				},
+				OutputPorts: []OutputPort{
+					OutputPort{
+						Address: Address{
+							Net:    0xeb,
+							SubUni: 0xbf,
+						},
+						Type:   0x87,
+						Status: 0x0,
+					},
+					OutputPort{
+						Address: Address{
+							Net:    0xeb,
+							SubUni: 0xbe,
+						},
+						Type:   0x87,
+						Status: 0x0,
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if want, got := tt.c, tt.p.NodeConfig(); !reflect.DeepEqual(want, got) {
 				t.Fatalf("unexpected Message bytes:\n- want: [%#v]\n-  got: [%#v]", want, got)
 			}
 		})
