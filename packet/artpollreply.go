@@ -143,7 +143,6 @@ func NewArtPollReplyPacket() *ArtPollReplyPacket {
 
 // MarshalBinary marshals an ArtPollReplyPacket into a byte slice.
 func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
 	return marshalPacket(p)
 }
 
@@ -159,7 +158,7 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 		return errInvalidPacket
 	}
 	p.id = ArtNet
-	p.OpCode = code.OpCode(uint16(b[8] + b[9]))
+	p.OpCode = code.OpCode(binary.LittleEndian.Uint16([]byte{b[8], b[9]}))
 
 	p.IPAddress = [4]byte{b[10], b[11], b[12], b[13]}
 	p.Port = binary.BigEndian.Uint16([]byte{b[14], b[15]})
@@ -234,6 +233,9 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 
 // validate is used to validate the Packet.
 func (p *ArtPollReplyPacket) validate() error {
+	if p.Port != ArtNetPort {
+		return fmt.Errorf("invalid port: want: %d, got: %d", ArtNetPort, p.Port)
+	}
 	if p.OpCode != code.OpPollReply {
 		return errInvalidOpCode
 	}
@@ -245,6 +247,7 @@ func (p *ArtPollReplyPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtPollReplyPacket) finish() {
-	p.OpCode = code.OpPollReply
+	p.OpCode = code.OpCode(uint16(code.OpPollReply&0xff) + uint16(code.OpPollReply>>8))
 	p.id = ArtNet
+	p.Port = ArtNetPort
 }

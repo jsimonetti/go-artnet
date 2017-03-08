@@ -31,6 +31,9 @@ type ArtNetPacket interface {
 // ArtNet is the fixed string "Art-Net" terminated with a zero
 var ArtNet = [8]byte{0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00}
 
+// ArtNetPort is the fixed ArtNet port 6454.
+const ArtNetPort = 6454
+
 // Header contains the base header for an ArtNet Packet
 type Header struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
@@ -50,7 +53,7 @@ func (p *Header) unmarshal(b []byte) error {
 		return errIncorrectHeaderLength
 	}
 	p.id = [8]byte{b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]}
-	p.OpCode = code.OpCode(uint16(b[8] + b[9]))
+	p.OpCode = code.OpCode(binary.LittleEndian.Uint16([]byte{b[8], b[9]}))
 	p.version = [2]byte{b[10], b[11]}
 	return p.validate()
 }
@@ -59,7 +62,8 @@ func (p *Header) validate() error {
 	if p.id != ArtNet {
 		return errInvalidPacket
 	}
-	if !code.ValidOp(p.OpCode) {
+	opcode := code.OpCode(uint16(p.OpCode&0xff) + uint16(p.OpCode>>8))
+	if !code.ValidOp(opcode) {
 		return errInvalidOpCode
 	}
 	if p.version[1] < version.Bytes()[1] {
@@ -69,6 +73,7 @@ func (p *Header) validate() error {
 }
 
 func marshalPacket(p ArtNetPacket) ([]byte, error) {
+	p.finish()
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
 		return nil, err

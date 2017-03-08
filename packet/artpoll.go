@@ -57,7 +57,6 @@ func NewArtPollPacket() *ArtPollPacket {
 
 // MarshalBinary marshals an ArtPollPacket into a byte slice.
 func (p *ArtPollPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
 	return marshalPacket(p)
 }
 
@@ -86,7 +85,7 @@ func (p *ArtPollPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtPollPacket) finish() {
-	p.OpCode = code.OpPoll
+	p.OpCode = code.OpCode(uint16(code.OpPoll&0xff) + uint16(code.OpPoll>>8))
 	p.id = ArtNet
 	p.version = version.Bytes()
 }
