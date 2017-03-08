@@ -5,33 +5,37 @@ package code
 import "fmt"
 
 const (
-	_PriorityCode_name_0 = "DpLow"
-	_PriorityCode_name_1 = "DpMed"
-	_PriorityCode_name_2 = "DpHigh"
-	_PriorityCode_name_3 = "DpCritical"
-	_PriorityCode_name_4 = "DpVolatile"
+	_PriorityCode_name_0 = "DpAll"
+	_PriorityCode_name_1 = "DpLow"
+	_PriorityCode_name_2 = "DpMed"
+	_PriorityCode_name_3 = "DpHigh"
+	_PriorityCode_name_4 = "DpCritical"
+	_PriorityCode_name_5 = "DpVolatile"
 )
 
 var (
 	_PriorityCode_index_0 = [...]uint8{0, 5}
 	_PriorityCode_index_1 = [...]uint8{0, 5}
-	_PriorityCode_index_2 = [...]uint8{0, 6}
-	_PriorityCode_index_3 = [...]uint8{0, 10}
+	_PriorityCode_index_2 = [...]uint8{0, 5}
+	_PriorityCode_index_3 = [...]uint8{0, 6}
 	_PriorityCode_index_4 = [...]uint8{0, 10}
+	_PriorityCode_index_5 = [...]uint8{0, 10}
 )
 
 func (i PriorityCode) String() string {
 	switch {
-	case i == 16:
+	case i == 0:
 		return _PriorityCode_name_0
-	case i == 64:
+	case i == 16:
 		return _PriorityCode_name_1
-	case i == 128:
+	case i == 64:
 		return _PriorityCode_name_2
-	case i == 224:
+	case i == 128:
 		return _PriorityCode_name_3
-	case i == 240:
+	case i == 224:
 		return _PriorityCode_name_4
+	case i == 240:
+		return _PriorityCode_name_5
 	default:
 		return fmt.Sprintf("PriorityCode(%d)", i)
 	}

@@ -93,3 +93,7 @@ func unmarshalPacket(p ArtNetPacket, b []byte) error {
 	}
 	return p.validate()
 }
+
+func swapUint16(x uint16) uint16 {
+	return uint16(x>>8) + uint16(x<<8)
+}

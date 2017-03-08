@@ -1,7 +1,7 @@
 package version
 
 // Version 14 support for this package only
-const Version ProtocolVersion = 0x1400
+const Version ProtocolVersion = 0x0e00
 
 // ProtocolVersion is used to define the version of the packets
 type ProtocolVersion uint16

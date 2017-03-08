@@ -11,7 +11,7 @@ func TestVersion(t *testing.T) {
 	}{
 		{
 			name: "V14",
-			b:    [2]byte{0x0, 0x14},
+			b:    [2]byte{0x0, 0x0e},
 		},
 	}
 	for _, tt := range tests {

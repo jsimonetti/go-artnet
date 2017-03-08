@@ -6,6 +6,9 @@ package code
 type PriorityCode uint8
 
 const (
+	// DpAll all message.
+	DpAll PriorityCode = 0x00
+
 	// DpLow Low priority message.
 	DpLow PriorityCode = 0x10
 

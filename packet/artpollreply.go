@@ -132,7 +132,7 @@ type ArtPollReplyPacket struct {
 	Status2 code.Status2
 
 	// Filler bytes. Transmit as zero. For future expansion.
-	_ [26]byte
+	_ [23]byte
 }
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
@@ -152,11 +152,12 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 
 // validate is used to validate the Packet.
 func (p *ArtPollReplyPacket) validate() error {
+	p.Port = swapUint16(p.Port)
 	if p.Port != ArtNetPort {
 		return fmt.Errorf("invalid port: want: %d, got: %d", ArtNetPort, p.Port)
 	}
 	// swap endianness
-	p.OpCode = code.OpCode(uint16(p.OpCode>>8) | uint16(p.OpCode<<8))
+	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
 	if p.OpCode != code.OpPollReply {
 		return errInvalidOpCode
 	}
@@ -168,7 +169,8 @@ func (p *ArtPollReplyPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtPollReplyPacket) finish() {
-	p.OpCode = code.OpCode(uint16(p.OpCode>>8) | uint16(p.OpCode<<8))
+	p.Port = swapUint16(p.Port)
+	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
 	p.ID = ArtNet
 	p.Port = ArtNetPort
 }

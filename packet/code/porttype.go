@@ -36,17 +36,17 @@ func (s PortType) Output() bool {
 func (s PortType) WithType(v string) PortType {
 	switch v {
 	case "DMX512":
-		return s | (0 << 0) | (1 << 0) | (2 << 0) | (3 << 0) | (4 << 0) | (5 << 0)
+		return s | 0x00
 	case "MIDI":
-		return s | (0 << 0) | (1 << 0) | (2 << 0) | (3 << 0) | (4 << 0) | (5 << 1)
+		return s | 0x01
 	case "Avab":
-		return s | (0 << 0) | (1 << 0) | (2 << 0) | (3 << 0) | (4 << 1) | (5 << 0)
+		return s | 0x02
 	case "Colortran CMX":
-		return s | (0 << 0) | (1 << 0) | (2 << 0) | (3 << 0) | (4 << 1) | (5 << 1)
+		return s | 0x03
 	case "ADB 62.5":
-		return s | (0 << 0) | (1 << 0) | (2 << 0) | (3 << 1) | (4 << 0) | (5 << 0)
+		return s | 0x04
 	case "Art-Net":
-		return s | (0 << 0) | (1 << 0) | (2 << 0) | (3 << 1) | (4 << 0) | (5 << 1)
+		return s | 0x05
 	}
 	return s
 }
