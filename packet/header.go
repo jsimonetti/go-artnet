@@ -38,38 +38,43 @@ const ArtNetPort = 6454
 type Header struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
 	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
-	id [8]byte
+	ID [8]byte
 
 	// OpCode defines the class of data following within this UDP packet.
 	// Transmitted low byte first.
 	OpCode code.OpCode
 
-	// this packet type contains a version
-	version [2]byte
+	// Version of this packet
+	Version [2]byte
 }
 
 func (p *Header) unmarshal(b []byte) error {
 	if len(b) < 12 {
 		return errIncorrectHeaderLength
 	}
-	p.id = [8]byte{b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]}
+	p.ID = [8]byte{b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]}
 	p.OpCode = code.OpCode(binary.LittleEndian.Uint16([]byte{b[8], b[9]}))
-	p.version = [2]byte{b[10], b[11]}
+	p.Version = [2]byte{b[10], b[11]}
 	return p.validate()
 }
 
 func (p *Header) validate() error {
-	if p.id != ArtNet {
+	if p.ID != ArtNet {
 		return errInvalidPacket
 	}
-	opcode := code.OpCode(uint16(p.OpCode&0xff) + uint16(p.OpCode>>8))
-	if !code.ValidOp(opcode) {
-		return errInvalidOpCode
+	if p.Version[1] < version.Bytes()[1] {
+		return fmt.Errorf("incompatible version. want: =>14, got: %d", p.Version[1])
 	}
-	if p.version[1] < version.Bytes()[1] {
-		return fmt.Errorf("incompatible version. want: 14, got: %d", p.version[1])
-	}
+	// swap endianness
+	p.OpCode = code.OpCode(uint16(p.OpCode>>8) | uint16(p.OpCode<<8))
 	return nil
+}
+
+// finish is used to finish the Packet for sending.
+func (p *Header) finish() {
+	p.OpCode = code.OpCode(uint16(p.OpCode&0xff) + uint16(p.OpCode>>8))
+	p.ID = ArtNet
+	p.Version = version.Bytes()
 }
 
 func marshalPacket(p ArtNetPacket) ([]byte, error) {
@@ -79,4 +84,12 @@ func marshalPacket(p ArtNetPacket) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func unmarshalPacket(p ArtNetPacket, b []byte) error {
+	buf := bytes.NewReader(b)
+	if err := binary.Read(buf, binary.BigEndian, p); err != nil {
+		return err
+	}
+	return p.validate()
 }

@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtIPProgPacket{}
@@ -31,15 +27,15 @@ type ArtIPProgPacket struct {
 	// Inherit the Header header
 	Header
 
-	// filler to pad to same length as ArtPoll
-	filler [2]byte
+	// Filler1 to pad to same length as ArtPoll
+	_ [2]byte
 
 	// Command defines the how this packet is processed. If all bits are clear, this
 	// is an enquiry only
 	Command uint8
 
-	// filler2 to pad to word allignment
-	filler2 byte
+	// Filler2 to pad to word allignment
+	_ byte
 
 	// ProgIP is IP Address to be programmed into Node if enabled by Command Field
 	ProgIP [4]byte
@@ -50,8 +46,8 @@ type ArtIPProgPacket struct {
 	// ProgPort is deprecated
 	ProgPort [2]byte
 
-	// spare bytes, transmit as zero, receivers don’t test.
-	spare [8]byte
+	// Spare bytes, transmit as zero, receivers don’t test.
+	_ [8]byte
 }
 
 // NewArtIPProgPacket returns an ArtNetPacket with the correct OpCode
@@ -61,22 +57,19 @@ func NewArtIPProgPacket() *ArtIPProgPacket {
 
 // MarshalBinary marshals an ArtIPProgPacket into a byte slice.
 func (p *ArtIPProgPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtIPProgPacket.
-//TODO
 func (p *ArtIPProgPacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtIPProgPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpIPProg {
 		return errInvalidOpCode
 	}
@@ -85,7 +78,5 @@ func (p *ArtIPProgPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtIPProgPacket) finish() {
-	p.OpCode = code.OpIPProg
-	p.id = ArtNet
-	p.version = version.Bytes()
+	p.Header.finish()
 }

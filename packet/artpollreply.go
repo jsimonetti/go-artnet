@@ -1,8 +1,6 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
@@ -23,7 +21,7 @@ type ArtPollReplyPacket struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
 	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
 	// ArtPollReply is the only packet not containing version, so do this here
-	id [8]byte
+	ID [8]byte
 
 	// OpCode defines the class of data following within this UDP packet.
 	// Transmitted low byte first.
@@ -113,8 +111,8 @@ type ArtPollReplyPacket struct {
 	// SwRemote show if the Node supports remote trigger inputs, this byte represents the trigger values.
 	SwRemote code.SwRemote
 
-	// spare bytes
-	spare [3]byte
+	// Spare bytes
+	_ [3]byte
 
 	// Style code defines the equipment style of the device.
 	Style code.StyleCode
@@ -132,8 +130,8 @@ type ArtPollReplyPacket struct {
 	// Status2 indicates Product capabilities
 	Status2 code.Status2
 
-	// filler bytes. Transmit as zero. For future expansion.
-	filler [26]byte
+	// Filler bytes. Transmit as zero. For future expansion.
+	_ [26]byte
 }
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
@@ -148,87 +146,7 @@ func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
 func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
-	if len(b) < 10 {
-		return errIncorrectHeaderLength
-	}
-	if len(b) != 239 {
-		return fmt.Errorf("invalid packet length received. want: 239, got: %d", len(b))
-	}
-	if !bytes.Equal(b[0:8], ArtNet[:]) {
-		return errInvalidPacket
-	}
-	p.id = ArtNet
-	p.OpCode = code.OpCode(binary.LittleEndian.Uint16([]byte{b[8], b[9]}))
-
-	p.IPAddress = [4]byte{b[10], b[11], b[12], b[13]}
-	p.Port = binary.BigEndian.Uint16([]byte{b[14], b[15]})
-	p.VersionInfo = binary.BigEndian.Uint16([]byte{b[16], b[17]})
-
-	p.NetSwitch = b[18]
-	p.SubSwitch = b[19]
-	p.Oem = binary.BigEndian.Uint16([]byte{b[20], b[21]})
-
-	p.UBEAVersion = b[22]
-	p.Status1 = code.Status1(b[23])
-
-	p.ESTAmanufacturer = [2]byte{b[24], b[25]}
-
-	for i, c := range b[26:44] {
-		if c == 0x00 {
-			p.LongName[i] = c
-			break
-		}
-		p.ShortName[i] = c
-	}
-
-	for i, c := range b[44:108] {
-		if c == 0x00 {
-			p.LongName[i] = c
-			break
-		}
-		p.LongName[i] = c
-	}
-
-	for i, r := range b[108:172] {
-		p.NodeReport[i] = code.NodeReportCode(r)
-	}
-
-	p.NumPorts = binary.BigEndian.Uint16([]byte{b[172], b[173]})
-	for i, r := range b[174:178] {
-		p.PortTypes[i] = code.PortType(r)
-	}
-
-	for i, r := range b[178:182] {
-		p.GoodInput[i] = code.GoodInput(r)
-	}
-
-	for i, r := range b[182:186] {
-		p.GoodOutput[i] = code.GoodOutput(r)
-	}
-
-	for i, r := range b[186:190] {
-		p.SwIn[i] = r
-	}
-
-	for i, r := range b[190:194] {
-		p.SwOut[i] = r
-	}
-	p.SwVideo = b[194]
-	p.SwMacro = code.SwMacro(b[195])
-	p.SwRemote = code.SwRemote(b[196])
-	p.spare = [3]byte{b[197], b[198], b[199]}
-	p.Style = code.StyleCode(b[200])
-
-	p.Macaddress = [6]byte{b[201], b[202], b[203], b[204], b[205], b[206]}
-	p.BindIP = [4]byte{b[207], b[208], b[209], b[210]}
-	p.BindIndex = b[211]
-	p.Status2 = code.Status2(b[212])
-
-	for i := 0; i < 26; i++ {
-		p.filler[i] = b[213+i]
-	}
-
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
@@ -236,6 +154,8 @@ func (p *ArtPollReplyPacket) validate() error {
 	if p.Port != ArtNetPort {
 		return fmt.Errorf("invalid port: want: %d, got: %d", ArtNetPort, p.Port)
 	}
+	// swap endianness
+	p.OpCode = code.OpCode(uint16(p.OpCode>>8) | uint16(p.OpCode<<8))
 	if p.OpCode != code.OpPollReply {
 		return errInvalidOpCode
 	}
@@ -247,7 +167,7 @@ func (p *ArtPollReplyPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtPollReplyPacket) finish() {
-	p.OpCode = code.OpCode(uint16(code.OpPollReply&0xff) + uint16(code.OpPollReply>>8))
-	p.id = ArtNet
+	p.OpCode = code.OpCode(uint16(p.OpCode>>8) | uint16(p.OpCode<<8))
+	p.ID = ArtNet
 	p.Port = ArtNetPort
 }

@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtIPProgReplyPacket{}
@@ -31,8 +27,8 @@ type ArtIPProgReplyPacket struct {
 	// Inherit the Header header
 	Header
 
-	// filler to pad to same length as ArtPoll and ArtIpProg
-	filler [4]byte
+	// Filler to pad to same length as ArtPoll and ArtIpProg
+	_ [4]byte
 
 	// ProgIP is IP Address to be programmed into Node if enabled by Command Field
 	ProgIP [4]byte
@@ -46,8 +42,8 @@ type ArtIPProgReplyPacket struct {
 	// Status defines if DHCP is enabled or not
 	Status uint8
 
-	// spare bytes, transmit as zero, receivers don’t test.
-	spare [7]byte
+	// Spare bytes, transmit as zero, receivers don’t test.
+	_ [7]byte
 }
 
 // NewArtIPProgReplyPacket returns an ArtNetPacket with the correct OpCode
@@ -57,22 +53,19 @@ func NewArtIPProgReplyPacket() *ArtIPProgReplyPacket {
 
 // MarshalBinary marshals an ArtIPProgReplyPacket into a byte slice.
 func (p *ArtIPProgReplyPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtIPProgReplyPacket.
-//TODO
 func (p *ArtIPProgReplyPacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtIPProgReplyPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpIPProgReply {
 		return errInvalidOpCode
 	}
@@ -81,7 +74,5 @@ func (p *ArtIPProgReplyPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtIPProgReplyPacket) finish() {
-	p.OpCode = code.OpIPProgReply
-	p.id = ArtNet
-	p.version = version.Bytes()
+	p.Header.finish()
 }

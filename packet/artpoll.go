@@ -1,10 +1,7 @@
 package packet
 
 import (
-	"fmt"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtPollPacket{}
@@ -61,22 +58,15 @@ func (p *ArtPollPacket) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollPacket.
-//TODO
 func (p *ArtPollPacket) UnmarshalBinary(b []byte) error {
-	if err := p.Header.unmarshal(b[:12]); err != nil {
-		return err
-	}
-	if len(b) != 14 {
-		return fmt.Errorf("invalid packet length received. want: 14, got: %d", len(b))
-	}
-	p.TalkToMe = code.TalkToMe(b[12])
-	p.Priority = code.PriorityCode(b[13])
-
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtPollPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpPoll {
 		return errInvalidOpCode
 	}
@@ -85,7 +75,5 @@ func (p *ArtPollPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtPollPacket) finish() {
-	p.OpCode = code.OpCode(uint16(code.OpPoll&0xff) + uint16(code.OpPoll>>8))
-	p.id = ArtNet
-	p.version = version.Bytes()
+	p.Header.finish()
 }

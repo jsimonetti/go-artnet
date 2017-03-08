@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtNzsPacket{}
@@ -51,7 +47,7 @@ type ArtNzsPacket struct {
 	Length uint16
 
 	// Data is a variable length string of DMX512 lighting data
-	Data string
+	Data [512]byte
 }
 
 // NewArtNzsPacket returns an ArtNetPacket with the correct OpCode
@@ -61,22 +57,19 @@ func NewArtNzsPacket() *ArtNzsPacket {
 
 // MarshalBinary marshals an ArtNzsPacket into a byte slice.
 func (p *ArtNzsPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtNzsPacket.
-//TODO
 func (p *ArtNzsPacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtNzsPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpNzs {
 		return errInvalidOpCode
 	}
@@ -85,7 +78,5 @@ func (p *ArtNzsPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtNzsPacket) finish() {
-	p.OpCode = code.OpNzs
-	p.id = ArtNet
-	p.version = version.Bytes()
+	p.Header.finish()
 }

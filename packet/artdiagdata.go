@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtDiagDataPacket{}
@@ -30,20 +26,20 @@ type ArtDiagDataPacket struct {
 	// Inherit the Header header
 	Header
 
-	// filler1
-	filler1 byte
+	// Filler1
+	_ byte
 
 	// Priority contains the lowest priority of diagnostics message that should be sent
 	Priority code.PriorityCode
 
-	// filler2
-	filler2 [2]byte
+	// Filler2
+	_ [2]byte
 
 	// Length indicates the length of the data
 	Length uint16
 
 	// Data is an ASCII string, null terminated. Max length is 512 bytes including the null terminator
-	Data string
+	Data [512]byte
 }
 
 // NewArtDiagDataPacket returns an ArtNetPacket with the correct OpCode
@@ -53,22 +49,19 @@ func NewArtDiagDataPacket() *ArtDiagDataPacket {
 
 // MarshalBinary marshals an ArtDiagDataPacket into a byte slice.
 func (p *ArtDiagDataPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtDiagDataPacket.
-//TODO
 func (p *ArtDiagDataPacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtDiagDataPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpDiagData {
 		return errInvalidOpCode
 	}
@@ -77,7 +70,5 @@ func (p *ArtDiagDataPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtDiagDataPacket) finish() {
-	p.OpCode = code.OpDiagData
-	p.version = version.Bytes()
-	p.id = ArtNet
+	p.Header.finish()
 }

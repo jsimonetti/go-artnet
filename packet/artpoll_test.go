@@ -20,9 +20,9 @@ func TestArtPollPacketMarshal(t *testing.T) {
 			name: "Empty",
 			p: ArtPollPacket{
 				Header: Header{
-					id:      ArtNet,
+					ID:      ArtNet,
 					OpCode:  code.OpPoll,
-					version: version.Bytes(),
+					Version: version.Bytes(),
 				},
 			},
 			b: []byte{
@@ -34,9 +34,9 @@ func TestArtPollPacketMarshal(t *testing.T) {
 			name: "WithDiagnosticsPrioLow",
 			p: ArtPollPacket{
 				Header: Header{
-					id:      ArtNet,
+					ID:      ArtNet,
 					OpCode:  code.OpPoll,
-					version: version.Bytes(),
+					Version: version.Bytes(),
 				},
 				TalkToMe: new(code.TalkToMe).WithDiagnostics(true),
 				Priority: code.DpLow,
@@ -50,9 +50,9 @@ func TestArtPollPacketMarshal(t *testing.T) {
 			name: "WithDiagnosticsUniPrioMedium",
 			p: ArtPollPacket{
 				Header: Header{
-					id:      ArtNet,
+					ID:      ArtNet,
 					OpCode:  code.OpPoll,
-					version: version.Bytes(),
+					Version: version.Bytes(),
 				},
 				TalkToMe: new(code.TalkToMe).WithDiagnostics(true).WithDiagUnicast(true),
 				Priority: code.DpMed,
@@ -66,9 +66,9 @@ func TestArtPollPacketMarshal(t *testing.T) {
 			name: "WithReplyOnChangeVlcPrioVolatile",
 			p: ArtPollPacket{
 				Header: Header{
-					id:      ArtNet,
+					ID:      ArtNet,
 					OpCode:  code.OpPoll,
-					version: version.Bytes(),
+					Version: version.Bytes(),
 				},
 				TalkToMe: new(code.TalkToMe).WithReplyOnChange(true).WithVLC(true),
 				Priority: code.DpVolatile,
@@ -109,9 +109,9 @@ func TestArtPollPacketUnmarshal(t *testing.T) {
 			name: "Empty",
 			p: ArtPollPacket{
 				Header: Header{
-					id:      ArtNet,
+					ID:      ArtNet,
 					OpCode:  code.OpPoll,
-					version: version.Bytes(),
+					Version: version.Bytes(),
 				},
 			},
 			b: []byte{
@@ -123,9 +123,9 @@ func TestArtPollPacketUnmarshal(t *testing.T) {
 			name: "WithDiagnosticsPrioLow",
 			p: ArtPollPacket{
 				Header: Header{
-					id:      ArtNet,
+					ID:      ArtNet,
 					OpCode:  code.OpPoll,
-					version: version.Bytes(),
+					Version: version.Bytes(),
 				},
 				TalkToMe: new(code.TalkToMe).WithDiagnostics(true),
 				Priority: code.DpLow,
@@ -139,9 +139,9 @@ func TestArtPollPacketUnmarshal(t *testing.T) {
 			name: "WithDiagnosticsUniPrioMedium",
 			p: ArtPollPacket{
 				Header: Header{
-					id:      ArtNet,
+					ID:      ArtNet,
 					OpCode:  code.OpPoll,
-					version: version.Bytes(),
+					Version: version.Bytes(),
 				},
 				TalkToMe: new(code.TalkToMe).WithDiagnostics(true).WithDiagUnicast(true),
 				Priority: code.DpMed,
@@ -155,9 +155,9 @@ func TestArtPollPacketUnmarshal(t *testing.T) {
 			name: "WithReplyOnChangeVlcPrioVolatile",
 			p: ArtPollPacket{
 				Header: Header{
-					id:      ArtNet,
+					ID:      ArtNet,
 					OpCode:  code.OpPoll,
-					version: version.Bytes(),
+					Version: version.Bytes(),
 				},
 				TalkToMe: new(code.TalkToMe).WithReplyOnChange(true).WithVLC(true),
 				Priority: code.DpVolatile,

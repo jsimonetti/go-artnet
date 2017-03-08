@@ -1,12 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-	"fmt"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtSyncPacket{}
@@ -34,8 +29,8 @@ type ArtSyncPacket struct {
 	// Inherit the Header header
 	Header
 
-	// aux are auxiliary bytes transmitted as zero
-	aux [2]byte
+	// AUX are auxiliary bytes transmitted as zero
+	_ [2]byte
 }
 
 // NewArtSyncPacket returns an ArtNetPacket with the correct OpCode
@@ -45,30 +40,19 @@ func NewArtSyncPacket() *ArtSyncPacket {
 
 // MarshalBinary marshals an ArtSyncPacket into a byte slice.
 func (p *ArtSyncPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtSyncPacket.
 func (p *ArtSyncPacket) UnmarshalBinary(b []byte) error {
-	if err := p.Header.unmarshal(b[:10]); err != nil {
-		return err
-	}
-	if len(b) != 14 {
-		return fmt.Errorf("invalid packet length received. want: 14, got: %d", len(b))
-	}
-	p.version = [2]byte{b[11], b[10]}
-	p.aux = [2]byte{b[12], b[13]}
-
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtSyncPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpSync {
 		return errInvalidOpCode
 	}
@@ -77,7 +61,5 @@ func (p *ArtSyncPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtSyncPacket) finish() {
-	p.OpCode = code.OpSync
-	p.version = version.Bytes()
-	p.id = ArtNet
+	p.Header.finish()
 }

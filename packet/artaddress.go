@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtAddressPacket{}
@@ -46,12 +42,12 @@ type ArtAddressPacket struct {
 	// ShortName for the Node. The Controller uses the ArtAddress packet to program this
 	// string. Max length is 17 characters. This is a fixed length field, although the string
 	// it contains can be shorter than the field.
-	ShortName string
+	ShortName [18]byte
 
 	// LongName for the Node. The Controller uses the ArtAddress packet to program this string.
 	// Max length is 63. This is a fixed length field, although the string it contains can be
 	// shorter than the field.
-	LongName string
+	LongName [64]byte
 
 	// SwIn Bits 3-0 of the 15 bit Port-Address for each of the 4
 	// possible input ports are encoded into the low nibble
@@ -82,22 +78,19 @@ func NewArtAddressPacket() *ArtAddressPacket {
 
 // MarshalBinary marshals an ArtAddressPacket into a byte slice.
 func (p *ArtAddressPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtAddressPacket.
-//TODO
 func (p *ArtAddressPacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtAddressPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpAddress {
 		return errInvalidOpCode
 	}
@@ -106,7 +99,5 @@ func (p *ArtAddressPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtAddressPacket) finish() {
-	p.OpCode = code.OpAddress
-	p.version = version.Bytes()
-	p.id = ArtNet
+	p.Header.finish()
 }

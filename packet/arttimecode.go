@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtTimeCodePacket{}
@@ -32,8 +28,8 @@ type ArtTimeCodePacket struct {
 	// Inherit the Header header
 	Header
 
-	// filler1
-	filler1 [2]byte
+	// Filler
+	_ [2]byte
 
 	// Frames time. 0 – 29 depending on mode
 	Frames uint8
@@ -58,22 +54,19 @@ func NewArtTimeCodePacket() *ArtTimeCodePacket {
 
 // MarshalBinary marshals an ArtTimeCodePacket into a byte slice.
 func (p *ArtTimeCodePacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtTimeCodePacket.
-//TODO
 func (p *ArtTimeCodePacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtTimeCodePacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpTimeCode {
 		return errInvalidOpCode
 	}
@@ -82,7 +75,5 @@ func (p *ArtTimeCodePacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtTimeCodePacket) finish() {
-	p.OpCode = code.OpTimeCode
-	p.version = version.Bytes()
-	p.id = ArtNet
+	p.Header.finish()
 }

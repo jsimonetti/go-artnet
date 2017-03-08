@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtTriggerPacket{}
@@ -56,8 +52,8 @@ type ArtTriggerPacket struct {
 	// Inherit the Header header
 	Header
 
-	// filler bytes
-	filler [2]byte
+	// Filler bytes
+	_ [2]byte
 
 	// Oem word describes the equipment manufacturer code of nodes that shall accept this trigger
 	Oem uint16
@@ -79,22 +75,19 @@ func NewArtTriggerPacket() *ArtTriggerPacket {
 
 // MarshalBinary marshals an ArtTriggerPacket into a byte slice.
 func (p *ArtTriggerPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtTriggerPacket.
-//TODO
 func (p *ArtTriggerPacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtTriggerPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpTrigger {
 		return errInvalidOpCode
 	}
@@ -103,7 +96,5 @@ func (p *ArtTriggerPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtTriggerPacket) finish() {
-	p.OpCode = code.OpTrigger
-	p.id = ArtNet
-	p.version = version.Bytes()
+	p.Header.finish()
 }

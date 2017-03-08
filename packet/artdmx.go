@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtDMXPacket{}
@@ -66,7 +62,7 @@ type ArtDMXPacket struct {
 	Length uint16
 
 	// Data is a variable length string of DMX512 lighting data
-	Data string
+	Data [512]byte
 }
 
 // NewArtDMXPacket returns an ArtNetPacket with the correct OpCode
@@ -76,22 +72,19 @@ func NewArtDMXPacket() *ArtDMXPacket {
 
 // MarshalBinary marshals an ArtDMXPacket into a byte slice.
 func (p *ArtDMXPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtDMXPacket.
-//TODO
 func (p *ArtDMXPacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtDMXPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpDMX {
 		return errInvalidOpCode
 	}
@@ -100,7 +93,5 @@ func (p *ArtDMXPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtDMXPacket) finish() {
-	p.OpCode = code.OpDMX
-	p.version = version.Bytes()
-	p.id = ArtNet
+	p.Header.finish()
 }

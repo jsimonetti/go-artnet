@@ -1,11 +1,7 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 var _ ArtNetPacket = &ArtCommandPacket{}
@@ -46,14 +42,14 @@ type ArtCommandPacket struct {
 	// Inherit the Header header
 	Header
 
-	// estamanufacturer contains a code used to represent equipment manufacturer.
-	estamanufacturer [2]byte
+	// ESTAmanufacturer contains a code used to represent equipment manufacturer.
+	ESTAmanufacturer [2]byte
 
 	// Length indicates the length of the data
 	Length uint16
 
 	// Data is an ASCII string, null terminated. Max length is 512 bytes including the null terminator
-	Data string
+	Data [512]byte
 }
 
 // NewArtCommandPacket returns an ArtNetPacket with the correct OpCode
@@ -63,32 +59,30 @@ func NewArtCommandPacket() *ArtCommandPacket {
 
 // MarshalBinary marshals an ArtCommandPacket into a byte slice.
 func (p *ArtCommandPacket) MarshalBinary() ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtCommandPacket.
-//TODO
 func (p *ArtCommandPacket) UnmarshalBinary(b []byte) error {
-	return p.validate()
+	return unmarshalPacket(p, b)
 }
 
 // validate is used to validate the Packet.
 func (p *ArtCommandPacket) validate() error {
+	if err := p.Header.validate(); err != nil {
+		return err
+	}
 	if p.OpCode != code.OpCommand {
 		return errInvalidOpCode
+	}
+	if p.ESTAmanufacturer != [2]byte{0xff, 0xff} {
+		return errInvalidPacket
 	}
 	return nil
 }
 
 // finish is used to finish the Packet for sending.
 func (p *ArtCommandPacket) finish() {
-	p.OpCode = code.OpCommand
-	p.version = version.Bytes()
-	p.id = ArtNet
-	p.estamanufacturer = [2]byte{0xff, 0xff}
+	p.Header.finish()
+	p.ESTAmanufacturer = [2]byte{0xff, 0xff}
 }
