@@ -173,25 +173,27 @@ func (p *ArtPollReplyPacket) finish() {
 	p.Port = ArtNetPort
 }
 
+// Address contains a universe address
 type Address struct {
 	Net    uint8 // 0-128
 	SubUni uint8
 }
 
+// InputPort contains information for an input port
 type InputPort struct {
 	Address Address
-
-	Type   code.PortType
-	Status code.GoodInput
+	Type    code.PortType
+	Status  code.GoodInput
 }
 
+// OutputPort contains information for an input port
 type OutputPort struct {
 	Address Address
-
-	Type   code.PortType
-	Status code.GoodOutput
+	Type    code.PortType
+	Status  code.GoodOutput
 }
 
+// NodeConfig is a representation of a single node.
 type NodeConfig struct {
 	OEM          uint16
 	Version      uint16
@@ -214,6 +216,7 @@ type NodeConfig struct {
 	OutputPorts []OutputPort
 }
 
+// NodeConfig returns a NodeConfig based on the information in the packet
 func (p *ArtPollReplyPacket) NodeConfig() NodeConfig {
 
 	nodeConfig := NodeConfig{
