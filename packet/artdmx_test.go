@@ -70,8 +70,8 @@ func TestArtDMXPacketMarshal(t *testing.T) {
 					OpCode:  code.OpDMX,
 					Version: version.Bytes(),
 				},
-				Sequence: 0x3f,
-				Length:   0x0200,
+				Sequence: 63,
+				Length:   512,
 				Data:     [512]byte{0xff, 0xff, 0xff},
 			},
 			b: []byte{
@@ -159,8 +159,8 @@ func TestArtDMXPacketUnmarshal(t *testing.T) {
 					OpCode:  code.OpDMX,
 					Version: version.Bytes(),
 				},
-				Sequence: 0x3f,
-				Length:   0x0200,
+				Sequence: 63,
+				Length:   512,
 				Data:     [512]byte{0xff, 0xff, 0xff},
 			},
 			b: [4096]byte{
