@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
@@ -574,6 +575,7 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 			if want, got := tt.p, a; !reflect.DeepEqual(want, got) {
 				t.Fatalf("unexpected Message bytes:\n- want: [%#v]\n-  got: [%#v]", want, got)
 			}
+			spew.Dump(tt.name, tt.p.NodeConfig())
 		})
 	}
 }
@@ -594,12 +596,10 @@ func TestArtPollReplyNodeConfig(t *testing.T) {
 			c: NodeConfig{
 				OEM:          0x0,
 				Version:      0x0,
-				Manufacturer: "\x00\x00",
+				Manufacturer: "",
 				Type:         "Node",
-				Name:         "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
-				Description: "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
-					"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
-					"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+				Name:         "",
+				Description:  "",
 				Report: []code.NodeReportCode{
 					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -739,7 +739,144 @@ func TestArtPollReplyNodeConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "DMXControl3",
+			p: ArtPollReplyPacket{
+				ID:               ArtNet,
+				OpCode:           code.OpPollReply,
+				IPAddress:        [4]byte{0xc0, 0xa8, 0x00, 0x0a},
+				Port:             ArtNetPort,
+				VersionInfo:      0x0000,
+				NetSwitch:        0x00,
+				SubSwitch:        0x00,
+				Oem:              0x08b0,
+				UBEAVersion:      0x00,
+				Status1:          new(code.Status1).WithPortAddr("unknown"),
+				ESTAmanufacturer: [2]byte{0x00, 0x00},
+				ShortName:        [18]byte{'D', 'M', 'X', 'C', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M'},
+				LongName:         [64]byte{'D', 'M', 'X', 'C', 'o', 'n', 't', 'r', 'o', 'l', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M', 'O', 'N', 'E', 'T', 'T', 'I', '1', ')'},
+				NodeReport: [64]code.NodeReportCode{
+					0x30, 0x30, 0x30, 0x31, 0x20, 0x5b, 0x30, 0x30,
+					0x30, 0x30, 0x5d, 0x20, 0x6c, 0x69, 0x62, 0x61,
+					0x72, 0x74, 0x6e, 0x65, 0x74,
+				},
+				NumPorts: 0x0004,
+				PortTypes: [4]code.PortType{
+					new(code.PortType).WithType("DMX512").WithOutput(true).WithInput(true),
+					new(code.PortType).WithType("DMX512").WithOutput(true).WithInput(true),
+					new(code.PortType).WithType("DMX512").WithOutput(true).WithInput(true),
+					new(code.PortType).WithType("DMX512").WithOutput(true).WithInput(true),
+				},
+				GoodInput: [4]code.GoodInput{
+					new(code.GoodInput).WithData(true),
+				},
+				SwIn:       [4]byte{0x00, 0x01, 0x02, 0x03},
+				SwOut:      [4]byte{0x04, 0x05, 0x06, 0x07},
+				Style:      code.StController,
+				Macaddress: [6]byte{0x3c, 0x97, 0x0e, 0xd7, 0xee, 0x2f},
+				Status2:    new(code.Status2).WithPort15(true),
+			},
+			c: NodeConfig{
+				OEM:          2224,
+				Version:      0,
+				BiosVersion:  0,
+				Manufacturer: "",
+				Type:         "Controller",
+				Name:         "DMXC 3 (31JSIM",
+				Description:  "DMXControl 3 (31JSIMONETTI1)",
+				Report: []code.NodeReportCode{
+					0x30, 0x30, 0x30, 0x31, 0x20, 0x5b, 0x30, 0x30,
+					0x30, 0x30, 0x5d, 0x20, 0x6c, 0x69, 0x62, 0x61,
+					0x72, 0x74, 0x6e, 0x65, 0x74, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				},
+				Ethernet:  net.HardwareAddr{0x3c, 0x97, 0x0e, 0xd7, 0xee, 0x2f},
+				IP:        net.IP{0xc0, 0xa8, 0x00, 0x0a},
+				BindIP:    net.IP{0x00, 0x00, 0x00, 0x00},
+				BindIndex: 0,
+				Port:      6454,
+				Status1:   new(code.Status1).WithUBEA(false),
+				Status2:   new(code.Status2).WithPort15(true),
+				BaseAddress: Address{
+					Net:    0,
+					SubUni: 0,
+				},
+				InputPorts: []InputPort{
+					InputPort{
+						Address: Address{
+							Net:    0,
+							SubUni: 0,
+						},
+						Type:   0xc0,
+						Status: 0x80,
+					},
+					InputPort{
+						Address: Address{
+							Net:    0,
+							SubUni: 1,
+						},
+						Type:   0xc0,
+						Status: 0,
+					},
+					InputPort{
+						Address: Address{
+							Net:    0,
+							SubUni: 2,
+						},
+						Type:   0xc0,
+						Status: 0,
+					},
+					InputPort{
+						Address: Address{
+							Net:    0,
+							SubUni: 3,
+						},
+						Type:   0xc0,
+						Status: 0,
+					},
+				},
+				OutputPorts: []OutputPort{
+					OutputPort{
+						Address: Address{
+							Net:    0,
+							SubUni: 4,
+						},
+						Type:   0xc0,
+						Status: 0,
+					},
+					OutputPort{
+						Address: Address{
+							Net:    0,
+							SubUni: 5,
+						},
+						Type:   0xc0,
+						Status: 0,
+					},
+					OutputPort{
+						Address: Address{
+							Net:    0,
+							SubUni: 6,
+						},
+						Type:   0xc0,
+						Status: 0,
+					},
+					OutputPort{
+						Address: Address{
+							Net:    0,
+							SubUni: 7,
+						},
+						Type:   0xc0,
+						Status: 0,
+					},
+				},
+			},
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if want, got := tt.c, tt.p.NodeConfig(); !reflect.DeepEqual(want, got) {

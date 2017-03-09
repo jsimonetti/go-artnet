@@ -239,10 +239,10 @@ func (p *ArtPollReplyPacket) NodeConfig() NodeConfig {
 		OEM:          p.Oem,
 		Version:      p.VersionInfo,
 		BiosVersion:  p.UBEAVersion,
-		Manufacturer: string(p.ESTAmanufacturer[:]),
+		Manufacturer: decodeString(p.ESTAmanufacturer[:]),
 		Type:         p.Style.String(),
-		Name:         string(p.ShortName[:]),
-		Description:  string(p.LongName[:]),
+		Name:         decodeString(p.ShortName[:]),
+		Description:  decodeString(p.LongName[:]),
 		Report:       p.NodeReport[:],
 		Ethernet:     p.Macaddress[:],
 		IP:           p.IPAddress[:],
@@ -281,4 +281,14 @@ func (p *ArtPollReplyPacket) NodeConfig() NodeConfig {
 	}
 
 	return nodeConfig
+}
+
+func decodeString(b []byte) string {
+	var str string
+	for _, c := range b {
+		if c != 0 {
+			str += string(c)
+		}
+	}
+	return str
 }
