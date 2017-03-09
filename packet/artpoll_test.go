@@ -94,6 +94,22 @@ func TestArtPollPacketMarshal(t *testing.T) {
 				0x00, 0x20, 0x00, 0x0e, 0x00, 0x00,
 			},
 		},
+		{
+			name: "DMXControl3",
+			p: ArtPollPacket{
+				Header: Header{
+					ID:      ArtNet,
+					OpCode:  code.OpPoll,
+					Version: [2]uint8{0x0, 0xe},
+				},
+				TalkToMe: new(code.TalkToMe).WithReplyOnChange(true),
+				Priority: code.DpCritical,
+			},
+			b: []byte{
+				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00,
+				0x00, 0x20, 0x00, 0x0e, 0x02, 0xe0,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -197,6 +213,22 @@ func TestArtPollPacketUnmarshal(t *testing.T) {
 			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00,
 				0x00, 0x20, 0x00, 0x0e, 0x00, 0x00,
+			},
+		},
+		{
+			name: "DMXControl3",
+			p: ArtPollPacket{
+				Header: Header{
+					ID:      ArtNet,
+					OpCode:  code.OpPoll,
+					Version: [2]uint8{0x0, 0xe},
+				},
+				TalkToMe: new(code.TalkToMe).WithReplyOnChange(true),
+				Priority: code.DpCritical,
+			},
+			b: []byte{
+				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00,
+				0x00, 0x20, 0x00, 0x0e, 0x02, 0xe0,
 			},
 		},
 	}
