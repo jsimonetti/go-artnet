@@ -132,7 +132,7 @@ type ArtPollReplyPacket struct {
 	Status2 code.Status2
 
 	// Filler bytes. Transmit as zero. For future expansion.
-	_ [23]byte
+	_ [26]byte
 }
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
@@ -158,8 +158,13 @@ func (p *ArtPollReplyPacket) validate() error {
 		return errInvalidOpCode
 	}
 	p.Port = swapUint16(p.Port)
+
+	// It appears not all software sends the port low byte first
 	if p.Port != ArtNetPort {
-		return fmt.Errorf("invalid port: want: %d, got: %d", ArtNetPort, p.Port)
+		p.Port = swapUint16(p.Port)
+		if p.Port != ArtNetPort {
+			return fmt.Errorf("invalid port: want: %d, got: %d", ArtNetPort, p.Port)
+		}
 	}
 	if !code.ValidStyle(p.Style) {
 		return errInvalidStyleCode
