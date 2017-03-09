@@ -61,7 +61,7 @@ type ArtDMXPacket struct {
 	// NB: Products which convert Art-Net to DMX512 may opt to always send 512 channels
 	Length uint16
 
-	// Data is a variable length string of DMX512 lighting data
+	// Data is a string of DMX512 lighting data
 	Data [512]byte
 }
 
@@ -93,5 +93,6 @@ func (p *ArtDMXPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtDMXPacket) finish() {
+	p.Length = 512
 	p.Header.finish()
 }
