@@ -9,3 +9,7 @@ to allow transfer of large amounts of DMX512 data over a wide area using standar
 networking technology.
 
 MIT Licensed.
+
+This package is still unfinished. The API is highly unstable.
+
+See [Examples](example/) for some hints on how to use this package.
