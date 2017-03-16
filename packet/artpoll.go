@@ -75,5 +75,6 @@ func (p *ArtPollPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtPollPacket) finish() {
+	p.OpCode = code.OpCode(swapUint16(uint16(code.OpPoll)))
 	p.Header.finish()
 }

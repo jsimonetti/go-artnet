@@ -175,7 +175,7 @@ func (p *ArtPollReplyPacket) validate() error {
 // finish is used to finish the Packet for sending.
 func (p *ArtPollReplyPacket) finish() {
 	p.ID = ArtNet
-	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
+	p.OpCode = code.OpCode(swapUint16(uint16(code.OpPollReply)))
 	p.Port = swapUint16(p.Port)
 }
 
