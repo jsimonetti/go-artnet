@@ -11,8 +11,8 @@ func main() {
 
 	dst := fmt.Sprintf("%s:%d", "255.255.255.255", packet.ArtNetPort)
 	broadcastAddr, _ := net.ResolveUDPAddr("udp", dst)
-	//src := fmt.Sprintf("%s:%d", "2.12.12.12", packet.ArtNetPort)
-	localAddr, _ := net.ResolveUDPAddr("udp", "2.12.12.12:6454")
+	src := fmt.Sprintf("%s:%d", "2.12.12.12", packet.ArtNetPort)
+	localAddr, _ := net.ResolveUDPAddr("udp", src)
 
 	conn, err := net.ListenUDP("udp", localAddr)
 	if err != nil {
@@ -35,7 +35,7 @@ func main() {
 	fmt.Printf("packet sent, wrote %d bytes\n", n)
 
 	buf := make([]byte, 4096)
-	n, a, err := conn.ReadFrom(buf)
+	n, a, err := conn.ReadFrom(buf) // first packet you read will be your own
 	n, a, err = conn.ReadFrom(buf)
 	if err != nil {
 		fmt.Printf("error reading packet: %s\n", err)

@@ -11,8 +11,8 @@ func main() {
 
 	dst := fmt.Sprintf("%s:%d", "255.255.255.255", packet.ArtNetPort)
 	broadcastAddr, _ := net.ResolveUDPAddr("udp", dst)
-	//src := fmt.Sprintf("%s:%d", "2.12.12.12", packet.ArtNetPort)
-	localAddr, _ := net.ResolveUDPAddr("udp", "2.12.12.12:6454")
+	src := fmt.Sprintf("%s:%d", "2.12.12.12", packet.ArtNetPort)
+	localAddr, _ := net.ResolveUDPAddr("udp", src)
 
 	conn, err := net.ListenUDP("udp", localAddr)
 	if err != nil {
