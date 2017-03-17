@@ -130,11 +130,11 @@ func (n *Node) recvLoop() {
 		b := make([]byte, 4096)
 		for {
 			num, from, err := n.conn.ReadFromUDP(b)
-			if from.IP.Equal(n.Config.IP) {
-				// this was sent from me, so we ignore it
-				continue
-			}
 			if !n.shutdown {
+				if from.IP.Equal(n.Config.IP) {
+					// this was sent from me, so we ignore it
+					continue
+				}
 				if err != nil && err != io.EOF {
 					n.recvCh <- &netPayload{
 						data: b[:num],
@@ -145,7 +145,9 @@ func (n *Node) recvLoop() {
 					data: b[:num],
 					err:  err,
 				}
+				continue
 			}
+			return
 		}
 	}()
 
