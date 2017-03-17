@@ -3,61 +3,95 @@ package node
 import (
 	"fmt"
 	"net"
+	"time"
 
-	"github.com/jsimonetti/go-artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/packet"
 )
 
-// Address contains a universe address
-type Address struct {
-	Net    uint8 // 0-128
-	SubUni uint8
+// Node is the information known about a node
+type Node struct {
+	// Config holds the configuration of this node
+	Config NodeConfig
+
+	// conn is the UDP connection this node will listen on
+	conn   net.Conn
+	sendCh chan netPayload
+	recvCh chan netPayload
+
+	// shutdownCh will be closed on shutdown of the node
+	shutdownCh chan struct{}
+
+	// pollCh will receive ArtPoll packets
+	pollCh chan packet.ArtPollPacket
+
+	// Controller is a config of a controller should this node by under it's controller
+	Controller NodeConfig
 }
 
-// String returns a string representation of Address
-func (a Address) String() string {
-	return fmt.Sprintf("%d:%d.%d", a.Net, (a.SubUni >> 4), a.SubUni&0x0f)
+type netPayload struct {
+	err  error
+	data []byte
 }
 
-// Integer returns the integer representation of Address
-func (a Address) Integer() int {
-	return int(uint16(a.Net)<<8 | uint16(a.SubUni))
+// New return a Node
+func New() Node {
+	return Node{
+		Config:     NodeConfig{},
+		sendCh:     make(chan netPayload),
+		recvCh:     make(chan netPayload),
+		pollCh:     make(chan packet.ArtPollPacket),
+		shutdownCh: make(chan struct{}),
+	}
 }
 
-// InputPort contains information for an input port
-type InputPort struct {
-	Address Address
-	Type    code.PortType
-	Status  code.GoodInput
+// Close will stop all running routines and close this controller
+func (n *Node) Close() {
+	close(n.shutdownCh)
 }
 
-// OutputPort contains information for an input port
-type OutputPort struct {
-	Address Address
-	Type    code.PortType
-	Status  code.GoodOutput
+func (n *Node) pollReplyLoop() {
+	var timer time.Ticker
+
+	for {
+		select {
+		case <-timer.C:
+			// if we should regularly send replies (can be requested by the controller)
+			// we send it here
+
+		case poll := <-n.pollCh:
+			// reply with pollReply
+			fmt.Printf("poll received: %v, now send a reply", poll)
+
+			// if we are asked to send changes regularyl, set the Ticker here
+
+		case <-n.shutdownCh:
+			return
+		}
+	}
 }
 
-// NodeConfig is a representation of a single node.
-type NodeConfig struct {
-	OEM          uint16
-	Version      uint16
-	BiosVersion  uint8
-	Manufacturer string
-	Type         string
-	Name         string
-	Description  string
+func (n *Node) sendLoop() {
+	for {
+		select {
+		case <-n.shutdownCh:
+			return
+		}
+	}
+}
 
-	Ethernet  net.HardwareAddr
-	IP        net.IP
-	BindIP    net.IP
-	BindIndex uint8
-	Port      uint16
+func (n *Node) recvLoop() {
+	for {
+		select {
+		case <-n.shutdownCh:
+			return
+		}
+	}
+}
 
-	Report  []code.NodeReportCode
-	Status1 code.Status1
-	Status2 code.Status2
+func (n *Node) Write(b []byte) (num int, err error) {
+	return 0, nil
+}
 
-	BaseAddress Address
-	InputPorts  []InputPort
-	OutputPorts []OutputPort
+func (n *Node) Read(b []byte) (num int, err error) {
+	return 0, nil
 }
