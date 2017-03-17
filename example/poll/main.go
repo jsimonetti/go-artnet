@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 
+	"github.com/jsimonetti/go-artnet/node"
 	"github.com/jsimonetti/go-artnet/packet"
 )
 
@@ -34,20 +36,43 @@ func main() {
 	}
 	fmt.Printf("packet sent, wrote %d bytes\n", n)
 
-	buf := make([]byte, 4096)
-	n, a, err := conn.ReadFrom(buf) // first packet you read will be your own
-	n, a, err = conn.ReadFrom(buf)
-	if err != nil {
-		fmt.Printf("error reading packet: %s\n", err)
-		return
-	}
-	fmt.Printf("packet read from %v, read %d bytes\n", a, n)
+	// wait 5 seconds for a reply
+	timer := time.NewTimer(5 * time.Second)
 
-	r := &packet.ArtPollReplyPacket{}
-	err = r.UnmarshalBinary(buf)
-	if err != nil {
-		fmt.Printf("error unmarshalling packet: %s\n", err)
-		return
+	recvCh := make(chan []byte)
+
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, addr, err := conn.ReadFromUDP(buf) // first packet you read will be your own
+			if err != nil {
+				fmt.Printf("error reading packet: %s\n", err)
+				continue
+
+			}
+			fmt.Printf("packet received from %v, read %d bytes\n", addr.IP, n)
+			if addr.IP.Equal(localAddr.IP) {
+				// skip messages from myself
+				continue
+			}
+			recvCh <- buf[:n]
+		}
+	}()
+
+	for {
+		select {
+		case b := <-recvCh:
+			p, err := packet.Unmarshal(b)
+			if err != nil {
+				fmt.Printf("error unmarshalling packet: %s\n", err)
+				continue
+			}
+			cf := node.ConfigFromArtPollReply(p.(*packet.ArtPollReplyPacket))
+			fmt.Printf("got reply: %#v\n", cf)
+
+		case <-timer.C:
+			fmt.Printf("timeout reached\n")
+			return
+		}
 	}
-	fmt.Printf("got reply: %v", r)
 }
