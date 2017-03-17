@@ -66,7 +66,7 @@ func (p *Header) validate() error {
 		return fmt.Errorf("incompatible version. want: =>14, got: %d", p.Version[1])
 	}
 	// swap endianness
-	p.OpCode = code.OpCode(uint16(p.OpCode>>8) | uint16(p.OpCode<<8))
+	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
 	return nil
 }
 
