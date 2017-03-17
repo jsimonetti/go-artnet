@@ -13,7 +13,7 @@ import (
 // Node is the information known about a node
 type Node struct {
 	// Config holds the configuration of this node
-	Config NodeConfig
+	Config Config
 
 	// conn is the UDP connection this node will listen on
 	conn   *net.UDPConn
@@ -28,7 +28,7 @@ type Node struct {
 	pollCh chan *packet.ArtPollPacket
 
 	// Controller is a config of a controller should this node by under it's controller
-	Controller NodeConfig
+	Controller Config
 }
 
 type netPayload struct {
@@ -39,7 +39,7 @@ type netPayload struct {
 // New return a Node
 func New(name string, style code.StyleCode, ip net.IP) Node {
 	n := Node{
-		Config: NodeConfig{
+		Config: Config{
 			Name: name,
 			Type: style,
 		},

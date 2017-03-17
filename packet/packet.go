@@ -6,6 +6,7 @@ import (
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
+// Unmarshal will unmarshal the bytes into an ArtNetPacket
 func Unmarshal(b []byte) (p ArtNetPacket, err error) {
 	h := Header{}
 	err = h.unmarshal(b)

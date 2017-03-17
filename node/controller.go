@@ -12,10 +12,11 @@ type Controller struct {
 	Node
 
 	// Nodes is a slice of nodes that are seen by this controller
-	Nodes    []NodeConfig
+	Nodes    []Config
 	nodeLock sync.Mutex
 }
 
+// Start will start this controller
 func (c *Controller) Start() {
 }
 
@@ -23,7 +24,7 @@ func (c *Controller) pollLoop() {
 }
 
 // addNode will add a Node to the list of known nodes
-func (c *Controller) addNode(node NodeConfig) error {
+func (c *Controller) addNode(node Config) error {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
@@ -38,7 +39,7 @@ func (c *Controller) addNode(node NodeConfig) error {
 }
 
 // deleteNode will delete a Node from the list of known nodes
-func (c *Controller) deleteNode(node NodeConfig) error {
+func (c *Controller) deleteNode(node Config) error {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 

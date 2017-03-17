@@ -38,8 +38,8 @@ type OutputPort struct {
 	Status  code.GoodOutput
 }
 
-// NodeConfig is a representation of a single node.
-type NodeConfig struct {
+// Config is a representation of a single node.
+type Config struct {
 	OEM          uint16
 	Version      uint16
 	BiosVersion  uint8
@@ -63,8 +63,9 @@ type NodeConfig struct {
 	OutputPorts []OutputPort
 }
 
-func ConfigFromArtPollReply(p *packet.ArtPollReplyPacket) NodeConfig {
-	nodeConfig := NodeConfig{
+// ConfigFromArtPollReply will return a Config from the information in the ArtPollReplyPacket
+func ConfigFromArtPollReply(p *packet.ArtPollReplyPacket) Config {
+	nodeConfig := Config{
 		OEM:          p.Oem,
 		Version:      p.VersionInfo,
 		BiosVersion:  p.UBEAVersion,
