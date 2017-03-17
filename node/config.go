@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/jsimonetti/go-artnet/packet"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
@@ -43,7 +44,7 @@ type NodeConfig struct {
 	Version      uint16
 	BiosVersion  uint8
 	Manufacturer string
-	Type         string
+	Type         code.StyleCode
 	Name         string
 	Description  string
 
@@ -60,4 +61,63 @@ type NodeConfig struct {
 	BaseAddress Address
 	InputPorts  []InputPort
 	OutputPorts []OutputPort
+}
+
+func ConfigFromArtPollReply(p *packet.ArtPollReplyPacket) NodeConfig {
+	nodeConfig := NodeConfig{
+		OEM:          p.Oem,
+		Version:      p.VersionInfo,
+		BiosVersion:  p.UBEAVersion,
+		Manufacturer: decodeString(p.ESTAmanufacturer[:]),
+		Type:         p.Style,
+		Name:         decodeString(p.ShortName[:]),
+		Description:  decodeString(p.LongName[:]),
+		Report:       p.NodeReport[:],
+		Ethernet:     p.Macaddress[:],
+		IP:           p.IPAddress[:],
+		BindIP:       p.BindIP[:],
+		BindIndex:    p.BindIndex,
+		Port:         p.Port,
+		Status1:      p.Status1,
+		Status2:      p.Status2,
+		BaseAddress: Address{
+			Net:    p.NetSwitch,
+			SubUni: p.SubSwitch,
+		},
+	}
+
+	for i := 0; i < int(p.NumPorts) && i < 4; i++ {
+		if p.PortTypes[i].Output() {
+			nodeConfig.OutputPorts = append(nodeConfig.OutputPorts, OutputPort{
+				Address: Address{
+					Net:    nodeConfig.BaseAddress.Net,
+					SubUni: nodeConfig.BaseAddress.SubUni | p.SwOut[i],
+				},
+				Type:   p.PortTypes[i],
+				Status: p.GoodOutput[i],
+			})
+		}
+		if p.PortTypes[i].Input() {
+			nodeConfig.InputPorts = append(nodeConfig.InputPorts, InputPort{
+				Address: Address{
+					Net:    nodeConfig.BaseAddress.Net,
+					SubUni: nodeConfig.BaseAddress.SubUni | p.SwIn[i],
+				},
+				Type:   p.PortTypes[i],
+				Status: p.GoodInput[i],
+			})
+		}
+	}
+
+	return nodeConfig
+}
+
+func decodeString(b []byte) string {
+	var str string
+	for _, c := range b {
+		if c != 0 {
+			str += string(c)
+		}
+	}
+	return str
 }

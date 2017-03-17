@@ -3,7 +3,6 @@ package packet
 import (
 	"fmt"
 
-	"github.com/jsimonetti/go-artnet/node"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
@@ -182,65 +181,4 @@ func (p *ArtPollReplyPacket) finish() {
 	p.ID = ArtNet
 	p.OpCode = code.OpCode(swapUint16(uint16(code.OpPollReply)))
 	p.Port = swapUint16(p.Port)
-}
-
-// NodeConfig returns a NodeConfig based on the information in the packet
-func (p *ArtPollReplyPacket) NodeConfig() node.NodeConfig {
-
-	nodeConfig := node.NodeConfig{
-		OEM:          p.Oem,
-		Version:      p.VersionInfo,
-		BiosVersion:  p.UBEAVersion,
-		Manufacturer: decodeString(p.ESTAmanufacturer[:]),
-		Type:         p.Style.String(),
-		Name:         decodeString(p.ShortName[:]),
-		Description:  decodeString(p.LongName[:]),
-		Report:       p.NodeReport[:],
-		Ethernet:     p.Macaddress[:],
-		IP:           p.IPAddress[:],
-		BindIP:       p.BindIP[:],
-		BindIndex:    p.BindIndex,
-		Port:         p.Port,
-		Status1:      p.Status1,
-		Status2:      p.Status2,
-		BaseAddress: node.Address{
-			Net:    p.NetSwitch,
-			SubUni: p.SubSwitch,
-		},
-	}
-
-	for i := 0; i < int(p.NumPorts) && i < 4; i++ {
-		if p.PortTypes[i].Output() {
-			nodeConfig.OutputPorts = append(nodeConfig.OutputPorts, node.OutputPort{
-				Address: node.Address{
-					Net:    nodeConfig.BaseAddress.Net,
-					SubUni: nodeConfig.BaseAddress.SubUni | p.SwOut[i],
-				},
-				Type:   p.PortTypes[i],
-				Status: p.GoodOutput[i],
-			})
-		}
-		if p.PortTypes[i].Input() {
-			nodeConfig.InputPorts = append(nodeConfig.InputPorts, node.InputPort{
-				Address: node.Address{
-					Net:    nodeConfig.BaseAddress.Net,
-					SubUni: nodeConfig.BaseAddress.SubUni | p.SwIn[i],
-				},
-				Type:   p.PortTypes[i],
-				Status: p.GoodInput[i],
-			})
-		}
-	}
-
-	return nodeConfig
-}
-
-func decodeString(b []byte) string {
-	var str string
-	for _, c := range b {
-		if c != 0 {
-			str += string(c)
-		}
-	}
-	return str
 }

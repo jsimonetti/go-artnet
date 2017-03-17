@@ -2,10 +2,12 @@ package node
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"time"
 
 	"github.com/jsimonetti/go-artnet/packet"
+	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
 // Node is the information known about a node
@@ -14,15 +16,16 @@ type Node struct {
 	Config NodeConfig
 
 	// conn is the UDP connection this node will listen on
-	conn   net.Conn
-	sendCh chan netPayload
-	recvCh chan netPayload
+	conn   *net.UDPConn
+	sendCh chan *netPayload
+	recvCh chan *netPayload
 
 	// shutdownCh will be closed on shutdown of the node
 	shutdownCh chan struct{}
+	shutdown   bool
 
 	// pollCh will receive ArtPoll packets
-	pollCh chan packet.ArtPollPacket
+	pollCh chan *packet.ArtPollPacket
 
 	// Controller is a config of a controller should this node by under it's controller
 	Controller NodeConfig
@@ -34,19 +37,58 @@ type netPayload struct {
 }
 
 // New return a Node
-func New() Node {
-	return Node{
-		Config:     NodeConfig{},
-		sendCh:     make(chan netPayload),
-		recvCh:     make(chan netPayload),
-		pollCh:     make(chan packet.ArtPollPacket),
-		shutdownCh: make(chan struct{}),
+func New(name string, style code.StyleCode, ip net.IP) Node {
+	n := Node{
+		Config: NodeConfig{
+			Name: name,
+			Type: style,
+		},
+		conn:     nil,
+		shutdown: true,
 	}
+	if len(ip) > 0 {
+		n.Config.IP = ip
+	}
+	//n.Config.IP = GenerateIP()
+	return n
 }
 
-// Close will stop all running routines and close this controller
-func (n *Node) Close() {
+// Stop will stop all running routines and close the network connection
+func (n *Node) Stop() {
+	n.shutdown = true
 	close(n.shutdownCh)
+	if n.conn != nil {
+		n.conn.Close()
+		n.conn = nil
+	}
+	close(n.sendCh)
+	close(n.recvCh)
+	close(n.pollCh)
+}
+
+// Start will start the controller
+func (n *Node) Start() (err error) {
+	n.sendCh = make(chan *netPayload)
+	n.recvCh = make(chan *netPayload)
+	n.pollCh = make(chan *packet.ArtPollPacket)
+	n.shutdownCh = make(chan struct{})
+	n.shutdown = false
+
+	src := fmt.Sprintf("%s:%d", n.Config.IP, packet.ArtNetPort)
+	localAddr, _ := net.ResolveUDPAddr("udp", src)
+
+	n.conn, err = net.ListenUDP("udp", localAddr)
+	if err != nil {
+		return fmt.Errorf("error net.ListenUDP: %s", err)
+	}
+
+	go n.recvLoop()
+	go n.sendLoop()
+
+	select {
+	case <-n.shutdownCh:
+		return nil
+	}
 }
 
 func (n *Node) pollReplyLoop() {
@@ -73,6 +115,8 @@ func (n *Node) pollReplyLoop() {
 func (n *Node) sendLoop() {
 	for {
 		select {
+		case p := <-n.sendCh:
+			fmt.Printf("send %v", p)
 		case <-n.shutdownCh:
 			return
 		}
@@ -80,18 +124,40 @@ func (n *Node) sendLoop() {
 }
 
 func (n *Node) recvLoop() {
+	// start a routine that will read data from n.conn
+	// and (if not shutdown), send to the recvCh
+	go func() {
+		b := make([]byte, 4096)
+		for {
+			num, from, err := n.conn.ReadFromUDP(b)
+			if from.IP.Equal(n.Config.IP) {
+				// this was sent from me, so we ignore it
+				continue
+			}
+			if !n.shutdown {
+				if err != nil && err != io.EOF {
+					n.recvCh <- &netPayload{
+						data: b[:num],
+						err:  err,
+					}
+				}
+				n.recvCh <- &netPayload{
+					data: b[:num],
+					err:  err,
+				}
+			}
+		}
+	}()
+
 	for {
 		select {
+		case payload := <-n.recvCh:
+			if payload.err == nil {
+				p, err := packet.Unmarshal(payload.data)
+				fmt.Printf("p: %v, err: %s", p, err)
+			}
 		case <-n.shutdownCh:
 			return
 		}
 	}
-}
-
-func (n *Node) Write(b []byte) (num int, err error) {
-	return 0, nil
-}
-
-func (n *Node) Read(b []byte) (num int, err error) {
-	return 0, nil
 }

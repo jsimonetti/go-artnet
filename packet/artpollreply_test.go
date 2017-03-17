@@ -2,11 +2,9 @@ package packet
 
 import (
 	"bytes"
-	"net"
 	"reflect"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
@@ -575,11 +573,11 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 			if want, got := tt.p, a; !reflect.DeepEqual(want, got) {
 				t.Fatalf("unexpected Message bytes:\n- want: [%#v]\n-  got: [%#v]", want, got)
 			}
-			spew.Dump(tt.name, tt.p.NodeConfig())
 		})
 	}
 }
 
+/*
 func TestArtPollReplyNodeConfig(t *testing.T) {
 	tests := []struct {
 		name string
@@ -885,3 +883,4 @@ func TestArtPollReplyNodeConfig(t *testing.T) {
 		})
 	}
 }
+*/
