@@ -2,8 +2,8 @@ package packet
 
 import (
 	"fmt"
-	"net"
 
+	"github.com/jsimonetti/go-artnet/node"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
@@ -152,6 +152,9 @@ func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
 
 // validate is used to validate the Packet.
 func (p *ArtPollReplyPacket) validate() error {
+	// ArtPollReply is a packer not using the standard header, so we need to do
+	// some extra things here that are normally done in the header validate
+
 	// swap endianness
 	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
 	if p.OpCode != code.OpPollReply {
@@ -160,12 +163,14 @@ func (p *ArtPollReplyPacket) validate() error {
 	p.Port = swapUint16(p.Port)
 
 	// It appears not all software sends the port low byte first
+	// so make an extra check here
 	if p.Port != ArtNetPort {
 		p.Port = swapUint16(p.Port)
 		if p.Port != ArtNetPort {
 			return fmt.Errorf("invalid port: want: %d, got: %d", ArtNetPort, p.Port)
 		}
 	}
+
 	if !code.ValidStyle(p.Style) {
 		return errInvalidStyleCode
 	}
@@ -179,63 +184,10 @@ func (p *ArtPollReplyPacket) finish() {
 	p.Port = swapUint16(p.Port)
 }
 
-// Address contains a universe address
-type Address struct {
-	Net    uint8 // 0-128
-	SubUni uint8
-}
-
-// String returns a string representation of Address
-func (a Address) String() string {
-	return fmt.Sprintf("%d:%d.%d", a.Net, (a.SubUni >> 4), a.SubUni&0x0f)
-}
-
-// Integer returns the integer representation of Address
-func (a Address) Integer() int {
-	return int(uint16(a.Net)<<8 | uint16(a.SubUni))
-}
-
-// InputPort contains information for an input port
-type InputPort struct {
-	Address Address
-	Type    code.PortType
-	Status  code.GoodInput
-}
-
-// OutputPort contains information for an input port
-type OutputPort struct {
-	Address Address
-	Type    code.PortType
-	Status  code.GoodOutput
-}
-
-// NodeConfig is a representation of a single node.
-type NodeConfig struct {
-	OEM          uint16
-	Version      uint16
-	BiosVersion  uint8
-	Manufacturer string
-	Type         string
-	Name         string
-	Description  string
-	Report       []code.NodeReportCode
-	Ethernet     net.HardwareAddr
-	IP           net.IP
-	BindIP       net.IP
-	BindIndex    uint8
-	Port         uint16
-	Status1      code.Status1
-	Status2      code.Status2
-
-	BaseAddress Address
-	InputPorts  []InputPort
-	OutputPorts []OutputPort
-}
-
 // NodeConfig returns a NodeConfig based on the information in the packet
-func (p *ArtPollReplyPacket) NodeConfig() NodeConfig {
+func (p *ArtPollReplyPacket) NodeConfig() node.NodeConfig {
 
-	nodeConfig := NodeConfig{
+	nodeConfig := node.NodeConfig{
 		OEM:          p.Oem,
 		Version:      p.VersionInfo,
 		BiosVersion:  p.UBEAVersion,
@@ -251,7 +203,7 @@ func (p *ArtPollReplyPacket) NodeConfig() NodeConfig {
 		Port:         p.Port,
 		Status1:      p.Status1,
 		Status2:      p.Status2,
-		BaseAddress: Address{
+		BaseAddress: node.Address{
 			Net:    p.NetSwitch,
 			SubUni: p.SubSwitch,
 		},
@@ -259,8 +211,8 @@ func (p *ArtPollReplyPacket) NodeConfig() NodeConfig {
 
 	for i := 0; i < int(p.NumPorts) && i < 4; i++ {
 		if p.PortTypes[i].Output() {
-			nodeConfig.OutputPorts = append(nodeConfig.OutputPorts, OutputPort{
-				Address: Address{
+			nodeConfig.OutputPorts = append(nodeConfig.OutputPorts, node.OutputPort{
+				Address: node.Address{
 					Net:    nodeConfig.BaseAddress.Net,
 					SubUni: nodeConfig.BaseAddress.SubUni | p.SwOut[i],
 				},
@@ -269,8 +221,8 @@ func (p *ArtPollReplyPacket) NodeConfig() NodeConfig {
 			})
 		}
 		if p.PortTypes[i].Input() {
-			nodeConfig.InputPorts = append(nodeConfig.InputPorts, InputPort{
-				Address: Address{
+			nodeConfig.InputPorts = append(nodeConfig.InputPorts, node.InputPort{
+				Address: node.Address{
 					Net:    nodeConfig.BaseAddress.Net,
 					SubUni: nodeConfig.BaseAddress.SubUni | p.SwIn[i],
 				},
