@@ -29,9 +29,6 @@ type Node struct {
 	pollCh chan *packet.ArtPollPacket
 	// pollCh will send ArtPollReply packets
 	pollReplyCh chan *packet.ArtPollReplyPacket
-
-	// Controller is a config of a controller should this node by under it's controller
-	Controller Config
 }
 
 type netPayload struct {
