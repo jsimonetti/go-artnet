@@ -37,9 +37,9 @@ type netPayload struct {
 	data []byte
 }
 
-// New return a Node
-func New(name string, style code.StyleCode, ip net.IP) Node {
-	n := Node{
+// NewNode return a Node
+func NewNode(name string, style code.StyleCode, ip net.IP) *Node {
+	n := &Node{
 		Config: Config{
 			Name: name,
 			Type: style,

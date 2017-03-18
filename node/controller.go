@@ -3,6 +3,7 @@ package node
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -19,7 +20,7 @@ type controlNode struct {
 // Controller holds the information for a controller
 type Controller struct {
 	// cNode is the Node for the cNode
-	cNode Node
+	cNode *Node
 
 	// Nodes is a slice of nodes that are seen by this controller
 	Nodes         []controlNode
@@ -28,6 +29,13 @@ type Controller struct {
 	nodeLock      sync.Mutex
 
 	shutdownCh chan struct{}
+}
+
+// NewController return a Controller
+func NewController(name string, ip net.IP) *Controller {
+	return &Controller{
+		cNode: NewNode(name, code.StController, ip),
+	}
 }
 
 // Start will start this controller
