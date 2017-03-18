@@ -22,14 +22,18 @@ type Controller struct {
 	Node
 
 	// Nodes is a slice of nodes that are seen by this controller
-	Nodes    []controlNode
-	nodeLock sync.Mutex
+	Nodes         []controlNode
+	outputAddress map[Address]*controlNode
+	inputAddress  map[Address]*controlNode
+	nodeLock      sync.Mutex
 
 	shutdownCh chan struct{}
 }
 
 // Start will start this controller
 func (c *Controller) Start() error {
+	c.outputAddress = make(map[Address]*controlNode)
+	c.inputAddress = make(map[Address]*controlNode)
 	go c.pollLoop()
 	return c.Node.Start()
 }
@@ -42,8 +46,8 @@ func (c *Controller) Stop() {
 
 // pollLoop will routinely poll for new nodes
 func (c *Controller) pollLoop() {
-	// we poll for new nodes every 3 seconds
-	pollTicker := time.NewTicker(3 * time.Second)
+	// we poll for new nodes every 5 seconds
+	pollTicker := time.NewTicker(5 * time.Second)
 
 	// we garbagecollect every 30 seconds
 	gcTicker := time.NewTicker(30 * time.Second)
@@ -102,8 +106,22 @@ func (c *Controller) updateNode(cfg Config) error {
 		if bytes.Equal(cfg.IP, n.node.IP) {
 			// update this node, since we allready know about it
 			fmt.Printf("updated node: %s, %s\n", cfg.Name, cfg.IP.String())
+			// remove references to this node from the output map
+			for _, port := range c.Nodes[i].node.OutputPorts {
+				delete(c.outputAddress, port.Address)
+			}
+			for _, port := range c.Nodes[i].node.InputPorts {
+				delete(c.inputAddress, port.Address)
+			}
 			c.Nodes[i].node = cfg
 			c.Nodes[i].lastSeen = time.Now()
+			// add references to this node from the output map
+			for _, port := range c.Nodes[i].node.OutputPorts {
+				c.outputAddress[port.Address] = &c.Nodes[i]
+			}
+			for _, port := range c.Nodes[i].node.InputPorts {
+				c.inputAddress[port.Address] = &c.Nodes[i]
+			}
 			return nil
 		}
 	}
@@ -122,6 +140,13 @@ func (c *Controller) deleteNode(node Config) error {
 	for i, n := range c.Nodes {
 		if bytes.Equal(node.IP, n.node.IP) {
 			// node found, remove it from the list
+			// remove references to this node from the output map
+			for _, port := range c.Nodes[i].node.OutputPorts {
+				delete(c.outputAddress, port.Address)
+			}
+			for _, port := range c.Nodes[i].node.InputPorts {
+				delete(c.inputAddress, port.Address)
+			}
 			c.Nodes = append(c.Nodes[:i], c.Nodes[i+1:]...)
 		}
 	}
@@ -143,6 +168,14 @@ start:
 		if c.Nodes[i].lastSeen.Add(staleAfter).Before(time.Now()) {
 			// it has been more then X seconds since we saw this node. remove it now.
 			fmt.Printf("remove stale node: %s, %s\n", c.Nodes[i].node.Name, c.Nodes[i].node.IP.String())
+			// remove references to this node from the output map
+			for _, port := range c.Nodes[i].node.OutputPorts {
+				delete(c.outputAddress, port.Address)
+			}
+			for _, port := range c.Nodes[i].node.InputPorts {
+				delete(c.inputAddress, port.Address)
+			}
+			// remove node
 			c.Nodes = append(c.Nodes[:i], c.Nodes[i+1:]...)
 			goto start
 		}
