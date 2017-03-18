@@ -26,6 +26,8 @@ type Node struct {
 
 	// pollCh will receive ArtPoll packets
 	pollCh chan *packet.ArtPollPacket
+	// pollCh will send ArtPollReply packets
+	pollReplyCh chan *packet.ArtPollReplyPacket
 
 	// Controller is a config of a controller should this node by under it's controller
 	Controller Config
@@ -64,6 +66,7 @@ func (n *Node) Stop() {
 	close(n.sendCh)
 	close(n.recvCh)
 	close(n.pollCh)
+	close(n.pollReplyCh)
 }
 
 // Start will start the controller
@@ -71,6 +74,7 @@ func (n *Node) Start() (err error) {
 	n.sendCh = make(chan *netPayload)
 	n.recvCh = make(chan *netPayload)
 	n.pollCh = make(chan *packet.ArtPollPacket)
+	n.pollReplyCh = make(chan *packet.ArtPollReplyPacket)
 	n.shutdownCh = make(chan struct{})
 	n.shutdown = false
 
@@ -113,10 +117,18 @@ func (n *Node) pollReplyLoop() {
 }
 
 func (n *Node) sendLoop() {
+	dst := fmt.Sprintf("%s:%d", "255.255.255.255", packet.ArtNetPort)
+	broadcastAddr, _ := net.ResolveUDPAddr("udp", dst)
+
 	for {
 		select {
-		case p := <-n.sendCh:
-			fmt.Printf("send %v", p)
+		case payload := <-n.sendCh:
+			_, err := n.conn.WriteTo(payload.data, broadcastAddr)
+			if err != nil {
+				fmt.Printf("error writing packet: %s\n", err)
+				continue
+			}
+			//fmt.Printf("packet sent, wrote %d bytes\n", num)
 		case <-n.shutdownCh:
 			return
 		}
@@ -156,8 +168,16 @@ func (n *Node) recvLoop() {
 		case payload := <-n.recvCh:
 			if payload.err == nil {
 				p, err := packet.Unmarshal(payload.data)
-				fmt.Printf("p: %v, err: %s", p, err)
+				switch p := p.(type) {
+				case *packet.ArtPollReplyPacket:
+					//fmt.Printf("p: %v, err: %s\n", p, err)
+					n.pollReplyCh <- p
+
+				default:
+					fmt.Printf("unknown type p: %v, err: %s\n", p, err)
+				}
 			}
+
 		case <-n.shutdownCh:
 			return
 		}

@@ -4,7 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"sync"
+	"time"
+
+	"github.com/jsimonetti/go-artnet/packet"
+	"github.com/jsimonetti/go-artnet/packet/code"
 )
+
+type controlNodes struct {
+	lastSeen time.Time
+	node     Config
+}
 
 // Controller holds the information for a controller
 type Controller struct {
@@ -12,28 +21,65 @@ type Controller struct {
 	Node
 
 	// Nodes is a slice of nodes that are seen by this controller
-	Nodes    []Config
+	Nodes    []controlNodes
 	nodeLock sync.Mutex
+
+	shutdownCh chan struct{}
 }
 
 // Start will start this controller
-func (c *Controller) Start() {
+func (c *Controller) Start() error {
+	go c.pollLoop()
+	return c.Node.Start()
+}
+
+// Stop will stop this controller
+func (c *Controller) Stop() {
+	c.Node.Stop()
+	close(c.shutdownCh)
 }
 
 func (c *Controller) pollLoop() {
+	timer := time.NewTicker(3 * time.Second)
+	artPoll := &packet.ArtPollPacket{
+		TalkToMe: new(code.TalkToMe).WithReplyOnChange(true),
+		Priority: code.DpAll,
+	}
+	b, err := artPoll.MarshalBinary()
+	if err != nil {
+		return
+	}
+	for {
+		select {
+		case <-timer.C:
+			// send ArtPollPacket
+			c.Node.sendCh <- &netPayload{data: b}
+
+		case p := <-c.Node.pollReplyCh:
+			cfg := ConfigFromArtPollReply(p)
+			c.updateNode(cfg)
+
+		case <-c.shutdownCh:
+			return
+		}
+	}
 }
 
-// addNode will add a Node to the list of known nodes
-func (c *Controller) addNode(node Config) error {
+// updateNode will add a Node to the list of known nodes
+func (c *Controller) updateNode(cfg Config) error {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	for _, n := range c.Nodes {
-		if bytes.Equal(node.IP, n.IP) {
-			return fmt.Errorf("allready a Node with this ip known, ip: %s", node.IP)
+	for i, n := range c.Nodes {
+		if bytes.Equal(cfg.IP, n.node.IP) {
+			fmt.Printf("updated node: %s, %s\n", cfg.Name, cfg.IP.String())
+			c.Nodes[i].node = cfg
+			c.Nodes[i].lastSeen = time.Now()
+			return nil
 		}
 	}
-	c.Nodes = append(c.Nodes, node)
+	fmt.Printf("added node: %s, %s\n", cfg.Name, cfg.IP.String())
+	c.Nodes = append(c.Nodes, controlNodes{node: cfg, lastSeen: time.Now()})
 
 	return nil
 }
@@ -44,7 +90,7 @@ func (c *Controller) deleteNode(node Config) error {
 	defer c.nodeLock.Unlock()
 
 	for i, n := range c.Nodes {
-		if bytes.Equal(n.IP, node.IP) {
+		if bytes.Equal(node.IP, n.node.IP) {
 			c.Nodes = append(c.Nodes[:i], c.Nodes[i+1:]...)
 		}
 	}
