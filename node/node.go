@@ -21,8 +21,9 @@ type Node struct {
 	recvCh chan *netPayload
 
 	// shutdownCh will be closed on shutdown of the node
-	shutdownCh chan struct{}
-	shutdown   bool
+	shutdownCh  chan struct{}
+	shutdown    bool
+	shutdownErr error
 
 	// pollCh will receive ArtPoll packets
 	pollCh chan *packet.ArtPollPacket
@@ -89,15 +90,17 @@ func (n *Node) Start() (err error) {
 	go n.recvLoop()
 	go n.sendLoop()
 
+	// wait untill shutdown
 	select {
 	case <-n.shutdownCh:
-		return nil
+		return n.shutdownErr
 	}
 }
 
 func (n *Node) pollReplyLoop() {
 	var timer time.Ticker
 
+	// loop untill shutdown
 	for {
 		select {
 		case <-timer.C:
@@ -120,6 +123,7 @@ func (n *Node) sendLoop() {
 	dst := fmt.Sprintf("%s:%d", "255.255.255.255", packet.ArtNetPort)
 	broadcastAddr, _ := net.ResolveUDPAddr("udp", dst)
 
+	// loop untill shutdown
 	for {
 		select {
 		case payload := <-n.sendCh:
@@ -163,6 +167,7 @@ func (n *Node) recvLoop() {
 		}
 	}()
 
+	// loop untill shutdown
 	for {
 		select {
 		case payload := <-n.recvCh:
