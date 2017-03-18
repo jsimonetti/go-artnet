@@ -18,13 +18,13 @@ type controlNode struct {
 
 // Controller holds the information for a controller
 type Controller struct {
-	// Node is the controller itself
-	Node
+	// cNode is the Node for the cNode
+	cNode Node
 
 	// Nodes is a slice of nodes that are seen by this controller
 	Nodes         []controlNode
-	outputAddress map[Address]*controlNode
-	inputAddress  map[Address]*controlNode
+	OutputAddress map[Address]*controlNode
+	InputAddress  map[Address]*controlNode
 	nodeLock      sync.Mutex
 
 	shutdownCh chan struct{}
@@ -32,15 +32,15 @@ type Controller struct {
 
 // Start will start this controller
 func (c *Controller) Start() error {
-	c.outputAddress = make(map[Address]*controlNode)
-	c.inputAddress = make(map[Address]*controlNode)
+	c.OutputAddress = make(map[Address]*controlNode)
+	c.InputAddress = make(map[Address]*controlNode)
 	go c.pollLoop()
-	return c.Node.Start()
+	return c.cNode.Start()
 }
 
 // Stop will stop this controller
 func (c *Controller) Stop() {
-	c.Node.Stop()
+	c.cNode.Stop()
 	close(c.shutdownCh)
 }
 
@@ -76,16 +76,16 @@ func (c *Controller) pollLoop() {
 		select {
 		case <-pollTicker.C:
 			// send ArtPollPacket
-			c.Node.sendCh <- &netPayload{data: b}
+			c.cNode.sendCh <- &netPayload{data: b}
 
 			// we should always reply to our own polls to let other controllers know we are here
-			c.Node.sendCh <- &netPayload{data: me}
+			c.cNode.sendCh <- &netPayload{data: me}
 
 		case <-gcTicker.C:
 			// clean up old nodes
 			c.gcNode()
 
-		case p := <-c.Node.pollReplyCh:
+		case p := <-c.cNode.pollReplyCh:
 			cfg := ConfigFromArtPollReply(p)
 			c.updateNode(cfg)
 
@@ -108,19 +108,19 @@ func (c *Controller) updateNode(cfg Config) error {
 			fmt.Printf("updated node: %s, %s\n", cfg.Name, cfg.IP.String())
 			// remove references to this node from the output map
 			for _, port := range c.Nodes[i].node.OutputPorts {
-				delete(c.outputAddress, port.Address)
+				delete(c.OutputAddress, port.Address)
 			}
 			for _, port := range c.Nodes[i].node.InputPorts {
-				delete(c.inputAddress, port.Address)
+				delete(c.InputAddress, port.Address)
 			}
 			c.Nodes[i].node = cfg
 			c.Nodes[i].lastSeen = time.Now()
 			// add references to this node from the output map
 			for _, port := range c.Nodes[i].node.OutputPorts {
-				c.outputAddress[port.Address] = &c.Nodes[i]
+				c.OutputAddress[port.Address] = &c.Nodes[i]
 			}
 			for _, port := range c.Nodes[i].node.InputPorts {
-				c.inputAddress[port.Address] = &c.Nodes[i]
+				c.InputAddress[port.Address] = &c.Nodes[i]
 			}
 			return nil
 		}
@@ -142,10 +142,10 @@ func (c *Controller) deleteNode(node Config) error {
 			// node found, remove it from the list
 			// remove references to this node from the output map
 			for _, port := range c.Nodes[i].node.OutputPorts {
-				delete(c.outputAddress, port.Address)
+				delete(c.OutputAddress, port.Address)
 			}
 			for _, port := range c.Nodes[i].node.InputPorts {
-				delete(c.inputAddress, port.Address)
+				delete(c.InputAddress, port.Address)
 			}
 			c.Nodes = append(c.Nodes[:i], c.Nodes[i+1:]...)
 		}
@@ -170,10 +170,10 @@ start:
 			fmt.Printf("remove stale node: %s, %s\n", c.Nodes[i].node.Name, c.Nodes[i].node.IP.String())
 			// remove references to this node from the output map
 			for _, port := range c.Nodes[i].node.OutputPorts {
-				delete(c.outputAddress, port.Address)
+				delete(c.OutputAddress, port.Address)
 			}
 			for _, port := range c.Nodes[i].node.InputPorts {
-				delete(c.inputAddress, port.Address)
+				delete(c.InputAddress, port.Address)
 			}
 			// remove node
 			c.Nodes = append(c.Nodes[:i], c.Nodes[i+1:]...)
