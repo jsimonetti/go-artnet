@@ -11,10 +11,10 @@ import (
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
-// controlNode hols the configuration of a node we control
-type controlNode struct {
-	lastSeen time.Time
-	node     Config
+// ControlledNode hols the configuration of a node we control
+type ControlledNode struct {
+	LastSeen time.Time
+	Node     Config
 }
 
 // Controller holds the information for a controller
@@ -23,9 +23,9 @@ type Controller struct {
 	cNode *Node
 
 	// Nodes is a slice of nodes that are seen by this controller
-	Nodes         []controlNode
-	OutputAddress map[Address]*controlNode
-	InputAddress  map[Address]*controlNode
+	Nodes         []ControlledNode
+	OutputAddress map[Address]*ControlledNode
+	InputAddress  map[Address]*ControlledNode
 	nodeLock      sync.Mutex
 
 	shutdownCh chan struct{}
@@ -40,8 +40,8 @@ func NewController(name string, ip net.IP) *Controller {
 
 // Start will start this controller
 func (c *Controller) Start() error {
-	c.OutputAddress = make(map[Address]*controlNode)
-	c.InputAddress = make(map[Address]*controlNode)
+	c.OutputAddress = make(map[Address]*ControlledNode)
+	c.InputAddress = make(map[Address]*ControlledNode)
 	go c.pollLoop()
 	return c.cNode.Start()
 }
@@ -111,23 +111,23 @@ func (c *Controller) updateNode(cfg Config) error {
 	defer c.nodeLock.Unlock()
 
 	for i, n := range c.Nodes {
-		if bytes.Equal(cfg.IP, n.node.IP) {
+		if bytes.Equal(cfg.IP, n.Node.IP) {
 			// update this node, since we allready know about it
 			fmt.Printf("updated node: %s, %s\n", cfg.Name, cfg.IP.String())
 			// remove references to this node from the output map
-			for _, port := range c.Nodes[i].node.OutputPorts {
+			for _, port := range c.Nodes[i].Node.OutputPorts {
 				delete(c.OutputAddress, port.Address)
 			}
-			for _, port := range c.Nodes[i].node.InputPorts {
+			for _, port := range c.Nodes[i].Node.InputPorts {
 				delete(c.InputAddress, port.Address)
 			}
-			c.Nodes[i].node = cfg
-			c.Nodes[i].lastSeen = time.Now()
+			c.Nodes[i].Node = cfg
+			c.Nodes[i].LastSeen = time.Now()
 			// add references to this node from the output map
-			for _, port := range c.Nodes[i].node.OutputPorts {
+			for _, port := range c.Nodes[i].Node.OutputPorts {
 				c.OutputAddress[port.Address] = &c.Nodes[i]
 			}
-			for _, port := range c.Nodes[i].node.InputPorts {
+			for _, port := range c.Nodes[i].Node.InputPorts {
 				c.InputAddress[port.Address] = &c.Nodes[i]
 			}
 			return nil
@@ -135,7 +135,7 @@ func (c *Controller) updateNode(cfg Config) error {
 	}
 	// new node, add it to our known nodes
 	fmt.Printf("added node: %s, %s\n", cfg.Name, cfg.IP.String())
-	c.Nodes = append(c.Nodes, controlNode{node: cfg, lastSeen: time.Now()})
+	c.Nodes = append(c.Nodes, ControlledNode{Node: cfg, LastSeen: time.Now()})
 
 	return nil
 }
@@ -146,13 +146,13 @@ func (c *Controller) deleteNode(node Config) error {
 	defer c.nodeLock.Unlock()
 
 	for i, n := range c.Nodes {
-		if bytes.Equal(node.IP, n.node.IP) {
+		if bytes.Equal(node.IP, n.Node.IP) {
 			// node found, remove it from the list
 			// remove references to this node from the output map
-			for _, port := range c.Nodes[i].node.OutputPorts {
+			for _, port := range c.Nodes[i].Node.OutputPorts {
 				delete(c.OutputAddress, port.Address)
 			}
-			for _, port := range c.Nodes[i].node.InputPorts {
+			for _, port := range c.Nodes[i].Node.InputPorts {
 				delete(c.InputAddress, port.Address)
 			}
 			c.Nodes = append(c.Nodes[:i], c.Nodes[i+1:]...)
@@ -173,14 +173,14 @@ func (c *Controller) gcNode() {
 
 start:
 	for i := range c.Nodes {
-		if c.Nodes[i].lastSeen.Add(staleAfter).Before(time.Now()) {
+		if c.Nodes[i].LastSeen.Add(staleAfter).Before(time.Now()) {
 			// it has been more then X seconds since we saw this node. remove it now.
-			fmt.Printf("remove stale node: %s, %s\n", c.Nodes[i].node.Name, c.Nodes[i].node.IP.String())
+			fmt.Printf("remove stale node: %s, %s\n", c.Nodes[i].Node.Name, c.Nodes[i].Node.IP.String())
 			// remove references to this node from the output map
-			for _, port := range c.Nodes[i].node.OutputPorts {
+			for _, port := range c.Nodes[i].Node.OutputPorts {
 				delete(c.OutputAddress, port.Address)
 			}
-			for _, port := range c.Nodes[i].node.InputPorts {
+			for _, port := range c.Nodes[i].Node.InputPorts {
 				delete(c.InputAddress, port.Address)
 			}
 			// remove node
