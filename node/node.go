@@ -170,13 +170,8 @@ func (n *Node) recvLoop() {
 		case payload := <-n.recvCh:
 			if payload.err == nil {
 				p, err := packet.Unmarshal(payload.data)
-				switch p := p.(type) {
-				case *packet.ArtPollReplyPacket:
-					//fmt.Printf("p: %v, err: %s\n", p, err)
-					n.pollReplyCh <- p
-
-				default:
-					fmt.Printf("unknown type p: %v, err: %s\n", p, err)
+				if err == nil {
+					go n.handlePacket(p)
 				}
 			}
 
@@ -184,4 +179,19 @@ func (n *Node) recvLoop() {
 			return
 		}
 	}
+}
+
+// handlePacket contains the logic for dealing with incoming packets
+func (n *Node) handlePacket(p packet.ArtNetPacket) {
+	switch p := p.(type) {
+	case *packet.ArtPollReplyPacket:
+		// only handle these packets if we are a controller
+		if n.Config.Type == code.StController {
+			n.pollReplyCh <- p
+		}
+
+	default:
+		fmt.Printf("unknown packet type: %#v\n", p)
+	}
+
 }
