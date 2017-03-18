@@ -10,7 +10,8 @@ import (
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
-type controlNodes struct {
+// controlNode hols a node configuration
+type controlNode struct {
 	lastSeen time.Time
 	node     Config
 }
@@ -21,7 +22,7 @@ type Controller struct {
 	Node
 
 	// Nodes is a slice of nodes that are seen by this controller
-	Nodes    []controlNodes
+	Nodes    []controlNode
 	nodeLock sync.Mutex
 
 	shutdownCh chan struct{}
@@ -79,7 +80,7 @@ func (c *Controller) updateNode(cfg Config) error {
 		}
 	}
 	fmt.Printf("added node: %s, %s\n", cfg.Name, cfg.IP.String())
-	c.Nodes = append(c.Nodes, controlNodes{node: cfg, lastSeen: time.Now()})
+	c.Nodes = append(c.Nodes, controlNode{node: cfg, lastSeen: time.Now()})
 
 	return nil
 }
