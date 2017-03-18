@@ -54,7 +54,7 @@ func (s PortType) WithType(v string) PortType {
 // Type returns the Port-Address Programming Authority
 // "DMX512" | "MIDI" | "Avab" | "Colortran CMX" | "ADB 62.5" | "Art-Net"
 func (s PortType) Type() string {
-	switch s >> 0 {
+	switch s & 0x1f {
 	case 0:
 		return "DMX512"
 	case 1:
@@ -68,7 +68,7 @@ func (s PortType) Type() string {
 	case 5:
 		return "Art-Net"
 	}
-	return "error"
+	return "unknown"
 }
 
 // String returns a string representation of PortType

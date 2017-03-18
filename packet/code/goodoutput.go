@@ -135,5 +135,5 @@ func (s GoodOutput) String() string {
 		data = "yes"
 	}
 
-	return "GoodOutput: OutputACN: " + acn + ", LTPMergeMode: " + ltp + ", OutputShort: " + output + ", Merging: " + merging + ", DMX512Text: " + text + ", DMX512SIP: " + sip + ", DMX512Test: " + test + ", DataReceived: " + data
+	return "GoodOutput: OutputACN: " + acn + ", LTPMergeMode: " + ltp + ", OutputShort: " + output + ", Merging: " + merging + ", DMX512Text: " + text + ", DMX512SIP: " + sip + ", DMX512Test: " + test + ", DataSending: " + data
 }
