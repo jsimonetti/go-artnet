@@ -20,13 +20,14 @@ func main() {
 		return
 	}
 
-	// set channels 1, 2, 3 and 4 to FL
+	// set channels 1 and 4 to FL, 2, 3 and 5 to FD
+	// on my colorBeam this sets output 1 to fullbright red with zero strobing
 
 	p := &packet.ArtDMXPacket{
 		Sequence: 1,
 		SubUni:   0,
 		Net:      0,
-		Data:     [512]byte{0xff, 0xff, 0xff, 0xff},
+		Data:     [512]byte{0xff, 0x00, 0x00, 0xff, 0x00},
 	}
 
 	b, err := p.MarshalBinary()
