@@ -31,6 +31,7 @@ type Node struct {
 	pollReplyCh chan *packet.ArtPollReplyPacket
 }
 
+// netPayload contains bytes read from the network and/or an error
 type netPayload struct {
 	err  error
 	data []byte
@@ -94,6 +95,8 @@ func (n *Node) Start() (err error) {
 	}
 }
 
+// pollReplyLoop loops to reply to ArtPoll packets
+// when a controller asks for continuous updates, we do that using a ticker
 func (n *Node) pollReplyLoop() {
 	var timer time.Ticker
 
@@ -116,6 +119,7 @@ func (n *Node) pollReplyLoop() {
 	}
 }
 
+// sendLoop is used to send packets to the network
 func (n *Node) sendLoop() {
 	dst := fmt.Sprintf("%s:%d", "255.255.255.255", packet.ArtNetPort)
 	broadcastAddr, _ := net.ResolveUDPAddr("udp", dst)
@@ -136,6 +140,11 @@ func (n *Node) sendLoop() {
 	}
 }
 
+// recvLoop is used to receive packets from the network
+// it starts a goroutine for dumping the msgs onto a channel,
+// the payload from that channel is then fed into a handler
+// due to the nature of broadcasting, we see our own sent
+// packets to, but we ignore them
 func (n *Node) recvLoop() {
 	// start a routine that will read data from n.conn
 	// and (if not shutdown), send to the recvCh
@@ -145,7 +154,7 @@ func (n *Node) recvLoop() {
 			num, from, err := n.conn.ReadFromUDP(b)
 			if !n.shutdown {
 				if from.IP.Equal(n.Config.IP) {
-					// this was sent from me, so we ignore it
+					// this was sent by me, so we ignore it
 					continue
 				}
 				if err != nil && err != io.EOF {
@@ -171,6 +180,7 @@ func (n *Node) recvLoop() {
 			if payload.err == nil {
 				p, err := packet.Unmarshal(payload.data)
 				if err == nil {
+					// if this is a valid packet we handle it
 					go n.handlePacket(p)
 				}
 			}
