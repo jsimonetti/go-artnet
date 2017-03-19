@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net"
+	"runtime"
 	"sync"
 	"time"
 
@@ -17,12 +19,16 @@ func main() {
 		wg.Done()
 	}()
 	time.Sleep(10 * time.Second)
+	c.SendDMXToAddress([512]byte{0x00, 0xff, 0x00, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
+	time.Sleep(5 * time.Second)
 	c.SendDMXToAddress([512]byte{0xff, 0x00, 0x00, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
 	time.Sleep(5 * time.Second)
 	c.SendDMXToAddress([512]byte{0x00, 0x00, 0xff, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
 	time.Sleep(5 * time.Second)
 	c.SendDMXToAddress([512]byte{}, artnet.Address{Net: 0, SubUni: 0})
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 	c.Stop()
 	wg.Wait()
+	fmt.Printf("num: %d", runtime.NumGoroutine())
+
 }

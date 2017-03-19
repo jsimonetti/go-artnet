@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/jsimonetti/go-artnet/packet"
@@ -17,25 +18,26 @@ type Node struct {
 
 	// conn is the UDP connection this node will listen on
 	conn   *net.UDPConn
-	sendCh chan *netPayload
-	recvCh chan *netPayload
+	sendCh chan netPayload
+	recvCh chan netPayload
 
 	// shutdownCh will be closed on shutdown of the node
-	shutdownCh  chan struct{}
-	shutdown    bool
-	shutdownErr error
+	shutdownCh   chan struct{}
+	shutdown     bool
+	shutdownErr  error
+	shutdownLock sync.Mutex
 
 	// pollCh will receive ArtPoll packets
-	pollCh chan *packet.ArtPollPacket
+	pollCh chan packet.ArtPollPacket
 	// pollCh will send ArtPollReply packets
-	pollReplyCh chan *packet.ArtPollReplyPacket
+	pollReplyCh chan packet.ArtPollReplyPacket
 
 	log Logger
 }
 
 // netPayload contains bytes read from the network and/or an error
 type netPayload struct {
-	address *net.UDPAddr
+	address net.UDPAddr
 	err     error
 	data    []byte
 }
@@ -60,7 +62,9 @@ func NewNode(name string, style code.StyleCode, ip net.IP) *Node {
 
 // Stop will stop all running routines and close the network connection
 func (n *Node) Stop() {
+	n.shutdownLock.Lock()
 	n.shutdown = true
+	n.shutdownLock.Unlock()
 	close(n.shutdownCh)
 	if n.conn != nil {
 		n.conn.Close()
@@ -73,30 +77,25 @@ func (n *Node) Stop() {
 }
 
 // Start will start the controller
-func (n *Node) Start() (err error) {
-	n.sendCh = make(chan *netPayload)
-	n.recvCh = make(chan *netPayload)
-	n.pollCh = make(chan *packet.ArtPollPacket)
-	n.pollReplyCh = make(chan *packet.ArtPollReplyPacket)
+func (n *Node) Start() {
+	n.sendCh = make(chan netPayload, 10)
+	n.recvCh = make(chan netPayload, 10)
+	n.pollCh = make(chan packet.ArtPollPacket, 10)
+	n.pollReplyCh = make(chan packet.ArtPollReplyPacket, 10)
 	n.shutdownCh = make(chan struct{})
 	n.shutdown = false
 
 	src := fmt.Sprintf("%s:%d", n.Config.IP, packet.ArtNetPort)
-	localAddr, _ := net.ResolveUDPAddr("udp", src)
+	localBroadcastAddr, _ := net.ResolveUDPAddr("udp", src)
 
-	n.conn, err = net.ListenUDP("udp", localAddr)
+	var err error
+	n.conn, err = net.ListenUDP("udp", localBroadcastAddr)
 	if err != nil {
-		return fmt.Errorf("error net.ListenUDP: %s", err)
+		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
 	}
 
 	go n.recvLoop()
 	go n.sendLoop()
-
-	// wait untill shutdown
-	select {
-	case <-n.shutdownCh:
-		return n.shutdownErr
-	}
 }
 
 // pollReplyLoop loops to reply to ArtPoll packets
@@ -129,17 +128,25 @@ func (n *Node) sendLoop() {
 	for {
 		select {
 		case payload := <-n.sendCh:
-			num, err := n.conn.WriteToUDP(payload.data, payload.address)
-			if err != nil {
-				n.log.With(Fields{"error": err}).Printf("error writing packet")
-				continue
+			n.shutdownLock.Lock()
+			if !n.shutdown {
+				num, err := n.conn.WriteTo(payload.data, &payload.address)
+				if err != nil {
+					n.log.With(Fields{"error": err}).Printf("error writing packet")
+					continue
+				}
+				n.log.With(Fields{"dst": payload.address.String(), "bytes": num}).Printf("packet sent")
 			}
-			n.log.With(Fields{"dst": payload.address.String(), "bytes": num}).Printf("packet sent")
-
+			n.shutdownLock.Unlock()
 		case <-n.shutdownCh:
 			return
 		}
 	}
+}
+
+func AddrToUDPAddr(addr net.Addr) net.UDPAddr {
+	udp, _ := net.ResolveUDPAddr(addr.Network(), addr.String())
+	return *udp
 }
 
 // recvLoop is used to receive packets from the network
@@ -153,27 +160,32 @@ func (n *Node) recvLoop() {
 	go func() {
 		b := make([]byte, 4096)
 		for {
-			num, from, err := n.conn.ReadFromUDP(b)
+			num, src, err := n.conn.ReadFrom(b)
+			n.shutdownLock.Lock()
 			if !n.shutdown {
-				if from.IP.Equal(n.Config.IP) {
+				n.shutdownLock.Unlock()
+				from := AddrToUDPAddr(src)
+				if n.Config.IP.Equal(from.IP) {
 					// this was sent by me, so we ignore it
+					//n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("ignoring received packet from self")
 					continue
 				}
 				n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("received packet")
 				if err != nil && err != io.EOF {
-					n.recvCh <- &netPayload{
+					n.recvCh <- netPayload{
 						address: from,
 						data:    b[:num],
 						err:     err,
 					}
 				}
-				n.recvCh <- &netPayload{
+				n.recvCh <- netPayload{
 					address: from,
 					data:    b[:num],
 					err:     err,
 				}
 				continue
 			}
+			n.shutdownLock.Unlock()
 			return
 		}
 	}()
@@ -202,7 +214,7 @@ func (n *Node) handlePacket(p packet.ArtNetPacket) {
 	case *packet.ArtPollReplyPacket:
 		// only handle these packets if we are a controller
 		if n.Config.Type == code.StController {
-			n.pollReplyCh <- p
+			n.pollReplyCh <- *p
 		}
 
 	default:

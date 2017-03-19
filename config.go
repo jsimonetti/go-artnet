@@ -64,7 +64,7 @@ type NodeConfig struct {
 }
 
 // ConfigFromArtPollReply will return a Config from the information in the ArtPollReplyPacket
-func ConfigFromArtPollReply(p *packet.ArtPollReplyPacket) NodeConfig {
+func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
 	nodeConfig := NodeConfig{
 		OEM:          p.Oem,
 		Version:      p.VersionInfo,

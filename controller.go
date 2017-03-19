@@ -11,8 +11,8 @@ import (
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
-var broadcastAddr = &net.UDPAddr{
-	IP:   []byte{0xff, 0xff, 0xff, 0xff},
+var broadcastAddr = net.UDPAddr{
+	IP:   []byte{0x02, 0xff, 0xff, 0xff},
 	Port: int(packet.ArtNetPort),
 }
 
@@ -20,7 +20,7 @@ var broadcastAddr = &net.UDPAddr{
 type ControlledNode struct {
 	LastSeen   time.Time
 	Node       NodeConfig
-	UDPAddress *net.UDPAddr
+	UDPAddress net.UDPAddr
 
 	Sequence  uint8
 	DMXBuffer map[Address][512]byte
@@ -92,9 +92,10 @@ func (c *Controller) Start() error {
 	c.OutputAddress = make(map[Address]*ControlledNode)
 	c.InputAddress = make(map[Address]*ControlledNode)
 	c.shutdownCh = make(chan struct{})
+	c.cNode.Start()
 	go c.pollLoop()
 	go c.dmxUpdateLoop()
-	return c.cNode.Start()
+	return c.cNode.shutdownErr
 }
 
 // Stop will stop this controller
@@ -135,13 +136,13 @@ func (c *Controller) pollLoop() {
 		select {
 		case <-pollTicker.C:
 			// send ArtPollPacket
-			c.cNode.sendCh <- &netPayload{
+			c.cNode.sendCh <- netPayload{
 				address: broadcastAddr,
 				data:    b,
 			}
 
 			// we should always reply to our own polls to let other controllers know we are here
-			c.cNode.sendCh <- &netPayload{
+			c.cNode.sendCh <- netPayload{
 				address: broadcastAddr,
 				data:    me,
 			}
@@ -163,25 +164,37 @@ func (c *Controller) pollLoop() {
 // SendDMXToAddress will set the DMXBuffer for a destination address
 // and update the node
 func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
+	fmt.Printf("received update channels to %x, %x, %x\n", dmx[0], dmx[1], dmx[2])
+
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	if cn, ok := c.OutputAddress[address]; ok {
-		err := cn.setDMXBuffer(dmx, address)
-		if err != nil {
-			c.log.With(Fields{"err": err, "address": address.String()}).Printf("error setting buffer on address")
-			return
-		}
+	var cn *ControlledNode
+	var ok bool
 
-		// get an ArtDMXPacket for this node
-		b, err := cn.dmxUpdate(address)
-		if err == nil {
-			c.cNode.sendCh <- &netPayload{
-				address: cn.UDPAddress,
-				data:    b,
-			}
-		}
+	if cn, ok = c.OutputAddress[address]; !ok {
+		c.log.With(Fields{"address": address.String()}).Printf("could not find node for address")
+		return
 	}
+	err := cn.setDMXBuffer(dmx, address)
+	if err != nil {
+		c.log.With(Fields{"err": err, "address": address.String()}).Printf("error setting buffer on address")
+		return
+	}
+
+	// get an ArtDMXPacket for this node
+	b, err := cn.dmxUpdate(address)
+	if err != nil {
+		c.log.With(Fields{"err": err}).Printf("error getting packet for dmxUpdate")
+		return
+	}
+
+	c.cNode.sendCh <- netPayload{
+		address: cn.UDPAddress,
+		//address: broadcastAddr,
+		data: b,
+	}
+
 }
 
 // dmxUpdateLoop will periodically update nodes until shutdown
@@ -202,9 +215,10 @@ func (c *Controller) dmxUpdateLoop() {
 					c.log.With(Fields{"err": err, "address": address.String()}).Printf("error getting buffer for address")
 					break
 				}
-				c.cNode.sendCh <- &netPayload{
+				c.cNode.sendCh <- netPayload{
 					address: node.UDPAddress,
-					data:    b,
+					//address: broadcastAddr,
+					data: b,
 				}
 			}
 			c.nodeLock.Unlock()
@@ -235,7 +249,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 			}
 			c.Nodes[i].Node = cfg
 			c.Nodes[i].LastSeen = time.Now()
-			// add references to this node from the output map
+			// add references to this node to the output map
 			for _, port := range c.Nodes[i].Node.OutputPorts {
 				c.OutputAddress[port.Address] = c.Nodes[i]
 			}
@@ -259,9 +273,17 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 		DMXBuffer:  buf,
 		LastSeen:   time.Now(),
 		Sequence:   0,
-		UDPAddress: &net.UDPAddr{IP: cfg.IP, Port: int(packet.ArtNetPort)},
+		UDPAddress: net.UDPAddr{IP: cfg.IP, Port: int(packet.ArtNetPort)},
 	}
 	c.Nodes = append(c.Nodes, node)
+
+	// add references to this node to the output map
+	for _, port := range node.Node.OutputPorts {
+		c.OutputAddress[port.Address] = node
+	}
+	for _, port := range node.Node.InputPorts {
+		c.InputAddress[port.Address] = node
+	}
 
 	return nil
 }
