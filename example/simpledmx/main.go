@@ -9,8 +9,8 @@ import (
 
 func main() {
 
-	dst := fmt.Sprintf("%s:%d", "255.255.255.255", packet.ArtNetPort)
-	broadcastAddr, _ := net.ResolveUDPAddr("udp", dst)
+	dst := fmt.Sprintf("%s:%d", "2.231.20.36", packet.ArtNetPort)
+	node, _ := net.ResolveUDPAddr("udp", dst)
 	src := fmt.Sprintf("%s:%d", "2.12.12.12", packet.ArtNetPort)
 	localAddr, _ := net.ResolveUDPAddr("udp", src)
 
@@ -32,7 +32,7 @@ func main() {
 
 	b, err := p.MarshalBinary()
 
-	n, err := conn.WriteTo(b, broadcastAddr)
+	n, err := conn.WriteTo(b, node)
 	if err != nil {
 		fmt.Printf("error writing packet: %s\n", err)
 		return
