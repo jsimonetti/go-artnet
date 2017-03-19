@@ -70,10 +70,6 @@ func (n *Node) Stop() {
 		n.conn.Close()
 		n.conn = nil
 	}
-	close(n.sendCh)
-	close(n.recvCh)
-	close(n.pollCh)
-	close(n.pollReplyCh)
 }
 
 // Start will start the controller

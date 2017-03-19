@@ -77,6 +77,9 @@ type Controller struct {
 	shutdownCh chan struct{}
 
 	log Logger
+
+	pollTicker *time.Ticker
+	gcTicker   *time.Ticker
 }
 
 // NewController return a Controller
@@ -93,6 +96,13 @@ func (c *Controller) Start() error {
 	c.InputAddress = make(map[Address]*ControlledNode)
 	c.shutdownCh = make(chan struct{})
 	c.cNode.Start()
+
+	// we poll for new nodes every 5 seconds
+	c.pollTicker = time.NewTicker(5 * time.Second)
+
+	// we garbagecollect every 30 seconds
+	c.gcTicker = time.NewTicker(30 * time.Second)
+
 	go c.pollLoop()
 	go c.dmxUpdateLoop()
 	return c.cNode.shutdownErr
@@ -100,18 +110,20 @@ func (c *Controller) Start() error {
 
 // Stop will stop this controller
 func (c *Controller) Stop() {
-	close(c.shutdownCh)
+	c.pollTicker.Stop()
+	c.gcTicker.Stop()
+
 	c.cNode.Stop()
+	select {
+	case <-c.cNode.shutdownCh:
+		goto end
+	}
+end:
+	close(c.shutdownCh)
 }
 
 // pollLoop will routinely poll for new nodes
 func (c *Controller) pollLoop() {
-	// we poll for new nodes every 5 seconds
-	pollTicker := time.NewTicker(5 * time.Second)
-
-	// we garbagecollect every 30 seconds
-	gcTicker := time.NewTicker(30 * time.Second)
-
 	artPoll := &packet.ArtPollPacket{
 		TalkToMe: new(code.TalkToMe).WithReplyOnChange(true),
 		Priority: code.DpAll,
@@ -134,7 +146,7 @@ func (c *Controller) pollLoop() {
 	// loop untill shutdown
 	for {
 		select {
-		case <-pollTicker.C:
+		case <-c.pollTicker.C:
 			// send ArtPollPacket
 			c.cNode.sendCh <- netPayload{
 				address: broadcastAddr,
@@ -147,7 +159,7 @@ func (c *Controller) pollLoop() {
 				data:    me,
 			}
 
-		case <-gcTicker.C:
+		case <-c.gcTicker.C:
 			// clean up old nodes
 			c.gcNode()
 
@@ -190,9 +202,9 @@ func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
 	}
 
 	c.cNode.sendCh <- netPayload{
-		address: cn.UDPAddress,
-		//address: broadcastAddr,
-		data: b,
+		//address: cn.UDPAddress,
+		address: broadcastAddr,
+		data:    b,
 	}
 
 }
@@ -216,9 +228,9 @@ func (c *Controller) dmxUpdateLoop() {
 					break
 				}
 				c.cNode.sendCh <- netPayload{
-					address: node.UDPAddress,
-					//address: broadcastAddr,
-					data: b,
+					//address: node.UDPAddress,
+					address: broadcastAddr,
+					data:    b,
 				}
 			}
 			c.nodeLock.Unlock()
