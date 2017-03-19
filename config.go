@@ -38,8 +38,8 @@ type OutputPort struct {
 	Status  code.GoodOutput
 }
 
-// Config is a representation of a single node.
-type Config struct {
+// NodeConfig is a representation of a single node.
+type NodeConfig struct {
 	OEM          uint16
 	Version      uint16
 	BiosVersion  uint8
@@ -64,8 +64,8 @@ type Config struct {
 }
 
 // ConfigFromArtPollReply will return a Config from the information in the ArtPollReplyPacket
-func ConfigFromArtPollReply(p *packet.ArtPollReplyPacket) Config {
-	nodeConfig := Config{
+func ConfigFromArtPollReply(p *packet.ArtPollReplyPacket) NodeConfig {
+	nodeConfig := NodeConfig{
 		OEM:          p.Oem,
 		Version:      p.VersionInfo,
 		BiosVersion:  p.UBEAVersion,
@@ -113,12 +113,14 @@ func ConfigFromArtPollReply(p *packet.ArtPollReplyPacket) Config {
 	return nodeConfig
 }
 
-func decodeString(b []byte) string {
-	var str string
+// decodeString will take a byteslice and create an ASCII string
+// the ASCII strings are 0 terminated
+func decodeString(b []byte) (str string) {
 	for _, c := range b {
-		if c != 0 {
-			str += string(c)
+		if c == 0 {
+			return
 		}
+		str += string(c)
 	}
-	return str
+	return
 }

@@ -13,7 +13,7 @@ import (
 // Node is the information known about a node
 type Node struct {
 	// Config holds the configuration of this node
-	Config Config
+	Config NodeConfig
 
 	// conn is the UDP connection this node will listen on
 	conn   *net.UDPConn
@@ -29,23 +29,27 @@ type Node struct {
 	pollCh chan *packet.ArtPollPacket
 	// pollCh will send ArtPollReply packets
 	pollReplyCh chan *packet.ArtPollReplyPacket
+
+	log Logger
 }
 
 // netPayload contains bytes read from the network and/or an error
 type netPayload struct {
-	err  error
-	data []byte
+	address *net.UDPAddr
+	err     error
+	data    []byte
 }
 
 // NewNode return a Node
 func NewNode(name string, style code.StyleCode, ip net.IP) *Node {
 	n := &Node{
-		Config: Config{
+		Config: NodeConfig{
 			Name: name,
 			Type: style,
 		},
 		conn:     nil,
 		shutdown: true,
+		log:      NewLogger(),
 	}
 	if len(ip) > 0 {
 		n.Config.IP = ip
@@ -109,7 +113,7 @@ func (n *Node) pollReplyLoop() {
 
 		case poll := <-n.pollCh:
 			// reply with pollReply
-			fmt.Printf("poll received: %v, now send a reply", poll)
+			n.log.With(Fields{"poll": poll}).Printf("poll received, now send a reply")
 
 			// if we are asked to send changes regularyl, set the Ticker here
 
@@ -121,19 +125,17 @@ func (n *Node) pollReplyLoop() {
 
 // sendLoop is used to send packets to the network
 func (n *Node) sendLoop() {
-	dst := fmt.Sprintf("%s:%d", "255.255.255.255", packet.ArtNetPort)
-	broadcastAddr, _ := net.ResolveUDPAddr("udp", dst)
-
 	// loop untill shutdown
 	for {
 		select {
 		case payload := <-n.sendCh:
-			_, err := n.conn.WriteTo(payload.data, broadcastAddr)
+			num, err := n.conn.WriteToUDP(payload.data, payload.address)
 			if err != nil {
-				fmt.Printf("error writing packet: %s\n", err)
+				n.log.With(Fields{"error": err}).Printf("error writing packet")
 				continue
 			}
-			//fmt.Printf("packet sent, wrote %d bytes\n", num)
+			n.log.With(Fields{"dst": payload.address.String(), "bytes": num}).Printf("packet sent")
+
 		case <-n.shutdownCh:
 			return
 		}
@@ -157,15 +159,18 @@ func (n *Node) recvLoop() {
 					// this was sent by me, so we ignore it
 					continue
 				}
+				n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("received packet")
 				if err != nil && err != io.EOF {
 					n.recvCh <- &netPayload{
-						data: b[:num],
-						err:  err,
+						address: from,
+						data:    b[:num],
+						err:     err,
 					}
 				}
 				n.recvCh <- &netPayload{
-					data: b[:num],
-					err:  err,
+					address: from,
+					data:    b[:num],
+					err:     err,
 				}
 				continue
 			}
@@ -177,13 +182,13 @@ func (n *Node) recvLoop() {
 	for {
 		select {
 		case payload := <-n.recvCh:
-			if payload.err == nil {
-				p, err := packet.Unmarshal(payload.data)
-				if err == nil {
-					// if this is a valid packet we handle it
-					go n.handlePacket(p)
-				}
+			//if payload.err == nil {
+			p, err := packet.Unmarshal(payload.data)
+			if err == nil {
+				// if this is a valid packet we handle it
+				go n.handlePacket(p)
 			}
+			//}
 
 		case <-n.shutdownCh:
 			return
@@ -201,7 +206,7 @@ func (n *Node) handlePacket(p packet.ArtNetPacket) {
 		}
 
 	default:
-		fmt.Printf("unknown packet type: %#v\n", p)
+		n.log.With(Fields{"packet": p}).Printf("unknown packet type")
 	}
 
 }
