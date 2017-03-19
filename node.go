@@ -140,6 +140,7 @@ func (n *Node) sendLoop() {
 	}
 }
 
+// AddrToUDPAddr will turn a net.Addr into a net.UDPAddr
 func AddrToUDPAddr(addr net.Addr) net.UDPAddr {
 	udp, _ := net.ResolveUDPAddr(addr.Network(), addr.String())
 	return *udp
