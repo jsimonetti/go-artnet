@@ -51,7 +51,7 @@ func (cn *ControlledNode) dmxUpdate(address Address) (b []byte, err error) {
 		return nil, fmt.Errorf("unknown address for controlled node")
 	}
 
-	cn.Sequence += 1
+	cn.Sequence++
 	p := &packet.ArtDMXPacket{
 		Sequence: cn.Sequence,
 		SubUni:   address.SubUni,
@@ -222,7 +222,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	for i, _ := range c.Nodes {
+	for i := range c.Nodes {
 		if bytes.Equal(cfg.IP, c.Nodes[i].Node.IP) {
 			// update this node, since we allready know about it
 			c.log.With(Fields{"node": cfg.Name, "ip": cfg.IP.String()}).Printf("updated node")
@@ -271,7 +271,7 @@ func (c *Controller) deleteNode(node NodeConfig) error {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	for i, _ := range c.Nodes {
+	for i := range c.Nodes {
 		if bytes.Equal(node.IP, c.Nodes[i].Node.IP) {
 			// node found, remove it from the list
 			// remove references to this node from the output map
