@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jsimonetti/go-artnet/packet"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
@@ -17,7 +18,7 @@ type Node struct {
 	Config NodeConfig
 
 	// conn is the UDP connection this node will listen on
-	conn   *net.UDPConn
+	conn   net.PacketConn
 	sendCh chan netPayload
 	recvCh chan netPayload
 
@@ -37,7 +38,7 @@ type Node struct {
 
 // netPayload contains bytes read from the network and/or an error
 type netPayload struct {
-	address net.UDPAddr
+	address net.IPAddr
 	err     error
 	data    []byte
 }
@@ -73,7 +74,9 @@ func (n *Node) Stop() {
 }
 
 // Start will start the controller
-func (n *Node) Start() {
+func (n *Node) Start() error {
+	n.log.With(Fields{"ip": n.Config.IP.String(), "type": n.Config.Type.String()}).Print("node started")
+
 	n.sendCh = make(chan netPayload, 10)
 	n.recvCh = make(chan netPayload, 10)
 	n.pollCh = make(chan packet.ArtPollPacket, 10)
@@ -82,16 +85,21 @@ func (n *Node) Start() {
 	n.shutdown = false
 
 	src := fmt.Sprintf("%s:%d", n.Config.IP, packet.ArtNetPort)
-	localBroadcastAddr, _ := net.ResolveUDPAddr("udp", src)
+	localAddr, _ := net.ResolveUDPAddr("udp", src)
 
 	var err error
-	n.conn, err = net.ListenUDP("udp", localBroadcastAddr)
+	//n.conn, err = net.ListenUDP("udp", localBroadcastAddr)
+	n.conn, err = packet.ListenRawUDP4(localAddr)
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
+		n.log.With(Fields{"error": err}).Print("error net.ListenUDP")
+		return err
 	}
 
 	go n.recvLoop()
 	go n.sendLoop()
+
+	return nil
 }
 
 // pollReplyLoop loops to reply to ArtPoll packets
@@ -141,8 +149,8 @@ func (n *Node) sendLoop() {
 }
 
 // AddrToUDPAddr will turn a net.Addr into a net.UDPAddr
-func AddrToUDPAddr(addr net.Addr) net.UDPAddr {
-	udp, _ := net.ResolveUDPAddr(addr.Network(), addr.String())
+func AddrToUDPAddr(addr net.Addr) net.IPAddr {
+	udp := addr.(*net.IPAddr)
 	return *udp
 }
 
@@ -167,6 +175,7 @@ func (n *Node) recvLoop() {
 					//n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("ignoring received packet from self")
 					continue
 				}
+				spew.Dump(b)
 				n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("received packet")
 				if err != nil && err != io.EOF {
 					n.recvCh <- netPayload{

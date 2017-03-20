@@ -11,16 +11,15 @@ import (
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
-var broadcastAddr = net.UDPAddr{
-	IP:   []byte{0x02, 0xff, 0xff, 0xff},
-	Port: int(packet.ArtNetPort),
+var broadcastAddr = net.IPAddr{
+	IP: []byte{0x02, 0xff, 0xff, 0xff},
 }
 
 // ControlledNode hols the configuration of a node we control
 type ControlledNode struct {
 	LastSeen   time.Time
 	Node       NodeConfig
-	UDPAddress net.UDPAddr
+	UDPAddress net.IPAddr
 
 	Sequence  uint8
 	DMXBuffer map[Address][512]byte
@@ -202,9 +201,9 @@ func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
 	}
 
 	c.cNode.sendCh <- netPayload{
-		//address: cn.UDPAddress,
-		address: broadcastAddr,
-		data:    b,
+		address: cn.UDPAddress,
+		//address: broadcastAddr,
+		data: b,
 	}
 
 }
@@ -228,9 +227,9 @@ func (c *Controller) dmxUpdateLoop() {
 					break
 				}
 				c.cNode.sendCh <- netPayload{
-					//address: node.UDPAddress,
-					address: broadcastAddr,
-					data:    b,
+					address: node.UDPAddress,
+					//address: broadcastAddr,
+					data: b,
 				}
 			}
 			c.nodeLock.Unlock()
@@ -285,7 +284,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 		DMXBuffer:  buf,
 		LastSeen:   time.Now(),
 		Sequence:   0,
-		UDPAddress: net.UDPAddr{IP: cfg.IP, Port: int(packet.ArtNetPort)},
+		UDPAddress: net.IPAddr{IP: cfg.IP},
 	}
 	c.Nodes = append(c.Nodes, node)
 
