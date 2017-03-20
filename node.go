@@ -18,6 +18,7 @@ type Node struct {
 
 	// conn is the UDP connection this node will listen on
 	conn   net.PacketConn
+	bconn  net.Conn
 	sendCh chan netPayload
 	recvCh chan netPayload
 
@@ -37,7 +38,7 @@ type Node struct {
 
 // netPayload contains bytes read from the network and/or an error
 type netPayload struct {
-	address net.IPAddr
+	address net.UDPAddr
 	err     error
 	data    []byte
 }
@@ -68,7 +69,9 @@ func (n *Node) Stop() {
 	close(n.shutdownCh)
 	if n.conn != nil {
 		n.conn.Close()
-		n.conn = nil
+	}
+	if n.bconn != nil {
+		n.bconn.Close()
 	}
 }
 
@@ -83,12 +86,16 @@ func (n *Node) Start() error {
 	n.shutdownCh = make(chan struct{})
 	n.shutdown = false
 
-	src := fmt.Sprintf("%s:%d", n.Config.IP, packet.ArtNetPort)
-	localAddr, _ := net.ResolveUDPAddr("udp", src)
-
 	var err error
-	//n.conn, err = net.ListenUDP("udp", localBroadcastAddr)
-	n.conn, err = packet.ListenRawUDP4(localAddr)
+
+	n.bconn, err = net.Dial("udp4", "2.255.255.255:6454")
+	if err != nil {
+		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
+		n.log.With(Fields{"error": err}).Print("error net.ListenUDP")
+		return err
+	}
+
+	n.conn, err = net.ListenPacket("udp4", "0.0.0.0:6454")
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
 		n.log.With(Fields{"error": err}).Print("error net.ListenUDP")
@@ -133,7 +140,13 @@ func (n *Node) sendLoop() {
 		case payload := <-n.sendCh:
 			n.shutdownLock.Lock()
 			if !n.shutdown {
-				num, err := n.conn.WriteTo(payload.data, &payload.address)
+				var num int
+				var err error
+				if payload.address.IP.Equal(broadcastAddr.IP) {
+					num, err = n.bconn.Write(payload.data)
+				} else {
+					num, err = n.conn.WriteTo(payload.data, &payload.address)
+				}
 				if err != nil {
 					n.log.With(Fields{"error": err}).Printf("error writing packet")
 					continue
@@ -148,8 +161,8 @@ func (n *Node) sendLoop() {
 }
 
 // AddrToUDPAddr will turn a net.Addr into a net.UDPAddr
-func AddrToUDPAddr(addr net.Addr) net.IPAddr {
-	udp := addr.(*net.IPAddr)
+func AddrToUDPAddr(addr net.Addr) net.UDPAddr {
+	udp := addr.(*net.UDPAddr)
 	return *udp
 }
 

@@ -11,15 +11,19 @@ import (
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
-var broadcastAddr = net.IPAddr{
-	IP: []byte{0x02, 0xff, 0xff, 0xff},
+var broadcastAddr = net.UDPAddr{
+	IP:   []byte{0x02, 0xff, 0xff, 0xff},
+	Port: int(packet.ArtNetPort),
 }
+
+// we poll for new nodes every 3 seconds
+var pollInterval = 3
 
 // ControlledNode hols the configuration of a node we control
 type ControlledNode struct {
 	LastSeen   time.Time
 	Node       NodeConfig
-	UDPAddress net.IPAddr
+	UDPAddress net.UDPAddr
 
 	Sequence  uint8
 	DMXBuffer map[Address][512]byte
@@ -96,11 +100,11 @@ func (c *Controller) Start() error {
 	c.shutdownCh = make(chan struct{})
 	c.cNode.Start()
 
-	// we poll for new nodes every 5 seconds
-	c.pollTicker = time.NewTicker(5 * time.Second)
+	tickInterval, _ := time.ParseDuration(fmt.Sprintf("%ds", pollInterval))
+	c.pollTicker = time.NewTicker(tickInterval)
 
-	// we garbagecollect every 30 seconds
-	c.gcTicker = time.NewTicker(30 * time.Second)
+	gcInterval, _ := time.ParseDuration(fmt.Sprintf("%ds", pollInterval))
+	c.gcTicker = time.NewTicker(gcInterval)
 
 	go c.pollLoop()
 	go c.dmxUpdateLoop()
@@ -140,6 +144,18 @@ func (c *Controller) pollLoop() {
 	if err != nil {
 		c.log.With(Fields{"err": err}).Printf("error creating ArtPollReply packet for self")
 		return
+	}
+
+	// send ArtPollPacket
+	c.cNode.sendCh <- netPayload{
+		address: broadcastAddr,
+		data:    b,
+	}
+
+	// we should always reply to our own polls to let other controllers know we are here
+	c.cNode.sendCh <- netPayload{
+		address: broadcastAddr,
+		data:    me,
 	}
 
 	// loop untill shutdown
@@ -284,7 +300,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 		DMXBuffer:  buf,
 		LastSeen:   time.Now(),
 		Sequence:   0,
-		UDPAddress: net.IPAddr{IP: cfg.IP},
+		UDPAddress: net.UDPAddr{IP: cfg.IP, Port: int(packet.ArtNetPort)},
 	}
 	c.Nodes = append(c.Nodes, node)
 
@@ -327,8 +343,9 @@ func (c *Controller) gcNode() {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	// we use X = 10 here, configurable in the future
-	staleAfter := 10 * time.Second
+	// nodes are stale after 5 missed ArtPoll's
+	//staleAfter, _ := time.ParseDuration(fmt.Sprintf("%ds", 5*pollInterval))
+	staleAfter := 7 * time.Second
 
 start:
 	for i := range c.Nodes {
