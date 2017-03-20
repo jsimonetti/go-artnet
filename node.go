@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jsimonetti/go-artnet/packet"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
@@ -175,7 +174,7 @@ func (n *Node) recvLoop() {
 					//n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("ignoring received packet from self")
 					continue
 				}
-				spew.Dump(b)
+
 				n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("received packet")
 				if err != nil && err != io.EOF {
 					n.recvCh <- netPayload{
