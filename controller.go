@@ -25,9 +25,10 @@ type ControlledNode struct {
 	Node       NodeConfig
 	UDPAddress net.UDPAddr
 
-	Sequence  uint8
-	DMXBuffer map[Address][512]byte
-	nodeLock  sync.Mutex
+	Sequence   uint8
+	DMXBuffer  map[Address][512]byte
+	LastUpdate time.Time
+	nodeLock   sync.Mutex
 }
 
 // setDMXBuffer will update the buffer on a universe address
@@ -216,36 +217,43 @@ func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
 		return
 	}
 
+	cn.LastUpdate = time.Now()
+
 	c.cNode.sendCh <- netPayload{
 		address: cn.UDPAddress,
-		//address: broadcastAddr,
-		data: b,
+		data:    b,
 	}
 
 }
 
 // dmxUpdateLoop will periodically update nodes until shutdown
 func (c *Controller) dmxUpdateLoop() {
-	// we force update nodes every 14 seconds
-	updateTicker := time.NewTicker(14 * time.Second)
+	// we force update nodes every 15 seconds
+	updateTicker := time.NewTicker(250 * time.Millisecond)
+	updateAfter := 800 * time.Millisecond
 
 	// loop untill shutdown
 	for {
 		select {
 		case <-updateTicker.C:
+
+			now := time.Now()
 			// send DMX buffer update
 			c.nodeLock.Lock()
 			for address, node := range c.OutputAddress {
-				// get an ArtDMXPacket for this node
-				b, err := node.dmxUpdate(address)
-				if err != nil {
-					c.log.With(Fields{"err": err, "address": address.String()}).Printf("error getting buffer for address")
-					break
-				}
-				c.cNode.sendCh <- netPayload{
-					address: node.UDPAddress,
-					//address: broadcastAddr,
-					data: b,
+				// only update if it has been X seconds
+				if node.LastUpdate.Add(updateAfter).Before(now) {
+					// get an ArtDMXPacket for this node
+					b, err := node.dmxUpdate(address)
+					if err != nil {
+						c.log.With(Fields{"err": err, "address": address.String()}).Printf("error getting buffer for address")
+						break
+					}
+					node.LastUpdate = now
+					c.cNode.sendCh <- netPayload{
+						address: node.UDPAddress,
+						data:    b,
+					}
 				}
 			}
 			c.nodeLock.Unlock()
@@ -301,6 +309,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 		LastSeen:   time.Now(),
 		Sequence:   0,
 		UDPAddress: net.UDPAddr{IP: cfg.IP, Port: int(packet.ArtNetPort)},
+		LastUpdate: time.Now(),
 	}
 	c.Nodes = append(c.Nodes, node)
 
