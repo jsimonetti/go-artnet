@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/jsimonetti/go-artnet/node"
+	artnet "github.com/jsimonetti/go-artnet"
 	"github.com/jsimonetti/go-artnet/packet"
 )
 
@@ -67,7 +67,7 @@ func main() {
 				fmt.Printf("error unmarshalling packet: %s\n", err)
 				continue
 			}
-			cf := node.ConfigFromArtPollReply(p.(*packet.ArtPollReplyPacket))
+			cf := artnet.ConfigFromArtPollReply(*p.(*packet.ArtPollReplyPacket))
 			fmt.Printf("got reply: %#v\n", cf)
 
 		case <-timer.C:
