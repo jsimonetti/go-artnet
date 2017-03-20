@@ -7,11 +7,29 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jsimonetti/go-artnet"
+	artnet "github.com/jsimonetti/go-artnet"
 )
 
 func main() {
-	c := artnet.NewController("controller-1", net.ParseIP("2.12.12.12"))
+
+	artsubnet := "2.0.0.0/8"
+	_, cidrnet, _ := net.ParseCIDR(artsubnet)
+
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Printf("error getting ips: %s\n", err)
+	}
+
+	var ip net.IP
+
+	for _, addr := range addrs {
+		ip = addr.(*net.IPNet).IP
+		if cidrnet.Contains(ip) {
+			break
+		}
+	}
+
+	c := artnet.NewController("controller-1", ip)
 	var wg sync.WaitGroup
 	go func() {
 		wg.Add(1)
