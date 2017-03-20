@@ -69,7 +69,10 @@ func (c *conn) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 
 	err = parser.DecodeLayers(buf, &decoded)
 	// the "No decoder for layer type Payload" is expected as we don't use a decode for the UDP payload
-	if err != nil && err.Error() != "No decoder for layer type Payload" {
+	if err.Error() == "No decoder for layer type Payload" {
+		err = nil
+	}
+	if err != nil {
 		return
 	}
 

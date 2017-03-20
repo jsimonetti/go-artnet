@@ -182,6 +182,7 @@ func (n *Node) recvLoop() {
 						data:    b[:num],
 						err:     err,
 					}
+					continue
 				}
 				n.recvCh <- netPayload{
 					address: from,
