@@ -99,6 +99,8 @@ func (c *Controller) Start() error {
 	c.OutputAddress = make(map[Address]*ControlledNode)
 	c.InputAddress = make(map[Address]*ControlledNode)
 	c.shutdownCh = make(chan struct{})
+	c.cNode.log = c.log.With(Fields{"type": "Node"})
+	c.log = c.log.With(Fields{"type": "Controller"})
 	c.cNode.Start()
 
 	tickInterval, _ := time.ParseDuration(fmt.Sprintf("%ds", pollInterval))
@@ -192,7 +194,7 @@ func (c *Controller) pollLoop() {
 // SendDMXToAddress will set the DMXBuffer for a destination address
 // and update the node
 func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
-	fmt.Printf("received update channels to %x, %x, %x\n", dmx[0], dmx[1], dmx[2])
+	c.log.With(Fields{"address": address.String()}).Printf("received update channels")
 
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()

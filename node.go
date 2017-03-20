@@ -52,7 +52,7 @@ func NewNode(name string, style code.StyleCode, ip net.IP) *Node {
 		},
 		conn:     nil,
 		shutdown: true,
-		log:      NewLogger(),
+		log:      NewLogger().With(Fields{"type": "Node"}),
 	}
 	if len(ip) > 0 {
 		n.Config.IP = ip
