@@ -77,7 +77,7 @@ func (n *Node) Stop() {
 
 // Start will start the controller
 func (n *Node) Start() error {
-	n.log.With(Fields{"ip": n.Config.IP.String(), "type": n.Config.Type.String()}).Print("node started")
+	n.log.With(Fields{"ip": n.Config.IP.String(), "type": n.Config.Type.String()}).Debug("node started")
 
 	n.sendCh = make(chan netPayload, 10)
 	n.recvCh = make(chan netPayload, 10)
@@ -91,14 +91,14 @@ func (n *Node) Start() error {
 	n.bconn, err = net.Dial("udp4", "2.255.255.255:6454")
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
-		n.log.With(Fields{"error": err}).Print("error net.ListenUDP")
+		n.log.With(Fields{"error": err}).Error("error net.ListenUDP")
 		return err
 	}
 
 	n.conn, err = net.ListenPacket("udp4", "0.0.0.0:6454")
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
-		n.log.With(Fields{"error": err}).Print("error net.ListenUDP")
+		n.log.With(Fields{"error": err}).Error("error net.ListenUDP")
 		return err
 	}
 
@@ -122,7 +122,7 @@ func (n *Node) pollReplyLoop() {
 
 		case poll := <-n.pollCh:
 			// reply with pollReply
-			n.log.With(Fields{"poll": poll}).Printf("poll received, now send a reply")
+			n.log.With(Fields{"poll": poll}).Debugf("poll received, now send a reply")
 
 			// if we are asked to send changes regularyl, set the Ticker here
 
@@ -148,10 +148,10 @@ func (n *Node) sendLoop() {
 					num, err = n.conn.WriteTo(payload.data, &payload.address)
 				}
 				if err != nil {
-					n.log.With(Fields{"error": err}).Printf("error writing packet")
+					n.log.With(Fields{"error": err}).Debugf("error writing packet")
 					continue
 				}
-				n.log.With(Fields{"dst": payload.address.String(), "bytes": num}).Printf("packet sent")
+				n.log.With(Fields{"dst": payload.address.String(), "bytes": num}).Debugf("packet sent")
 			}
 			n.shutdownLock.Unlock()
 		case <-n.shutdownCh:
@@ -184,11 +184,11 @@ func (n *Node) recvLoop() {
 				from := AddrToUDPAddr(src)
 				if n.Config.IP.Equal(from.IP) {
 					// this was sent by me, so we ignore it
-					//n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("ignoring received packet from self")
+					//n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("ignoring received packet from self")
 					continue
 				}
 
-				n.log.With(Fields{"src": from.String(), "bytes": num}).Printf("received packet")
+				n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("received packet")
 				if err != nil && err != io.EOF {
 					n.recvCh <- netPayload{
 						address: from,
@@ -237,7 +237,7 @@ func (n *Node) handlePacket(p packet.ArtNetPacket) {
 		}
 
 	default:
-		n.log.With(Fields{"packet": p}).Printf("unknown packet type")
+		n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
 	}
 
 }

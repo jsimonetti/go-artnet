@@ -138,14 +138,14 @@ func (c *Controller) pollLoop() {
 	// create an ArtPoll packet to send out periodically
 	b, err := artPoll.MarshalBinary()
 	if err != nil {
-		c.log.With(Fields{"err": err}).Printf("error creating ArtPoll packet")
+		c.log.With(Fields{"err": err}).Error("error creating ArtPoll packet")
 		return
 	}
 
 	// create an ArtPollReply packet to send out with the ArtPoll packet
 	me, err := new(packet.ArtPollReplyPacket).MarshalBinary()
 	if err != nil {
-		c.log.With(Fields{"err": err}).Printf("error creating ArtPollReply packet for self")
+		c.log.With(Fields{"err": err}).Error("error creating ArtPollReply packet for self")
 		return
 	}
 
@@ -194,7 +194,7 @@ func (c *Controller) pollLoop() {
 // SendDMXToAddress will set the DMXBuffer for a destination address
 // and update the node
 func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
-	c.log.With(Fields{"address": address.String()}).Printf("received update channels")
+	c.log.With(Fields{"address": address.String()}).Debug("received update channels")
 
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
@@ -203,19 +203,19 @@ func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
 	var ok bool
 
 	if cn, ok = c.OutputAddress[address]; !ok {
-		c.log.With(Fields{"address": address.String()}).Printf("could not find node for address")
+		c.log.With(Fields{"address": address.String()}).Error("could not find node for address")
 		return
 	}
 	err := cn.setDMXBuffer(dmx, address)
 	if err != nil {
-		c.log.With(Fields{"err": err, "address": address.String()}).Printf("error setting buffer on address")
+		c.log.With(Fields{"err": err, "address": address.String()}).Error("error setting buffer on address")
 		return
 	}
 
 	// get an ArtDMXPacket for this node
 	b, err := cn.dmxUpdate(address)
 	if err != nil {
-		c.log.With(Fields{"err": err}).Printf("error getting packet for dmxUpdate")
+		c.log.With(Fields{"err": err}).Error("error getting packet for dmxUpdate")
 		return
 	}
 
@@ -248,7 +248,7 @@ func (c *Controller) dmxUpdateLoop() {
 					// get an ArtDMXPacket for this node
 					b, err := node.dmxUpdate(address)
 					if err != nil {
-						c.log.With(Fields{"err": err, "address": address.String()}).Printf("error getting buffer for address")
+						c.log.With(Fields{"err": err, "address": address.String()}).Error("error getting buffer for address")
 						break
 					}
 					node.LastUpdate = now
@@ -276,7 +276,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 	for i := range c.Nodes {
 		if bytes.Equal(cfg.IP, c.Nodes[i].Node.IP) {
 			// update this node, since we allready know about it
-			c.log.With(Fields{"node": cfg.Name, "ip": cfg.IP.String()}).Printf("updated node")
+			c.log.With(Fields{"node": cfg.Name, "ip": cfg.IP.String()}).Debug("updated node")
 			// remove references to this node from the output map
 			for _, port := range c.Nodes[i].Node.OutputPorts {
 				delete(c.OutputAddress, port.Address)
@@ -304,7 +304,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 	}
 
 	// new node, add it to our known nodes
-	c.log.With(Fields{"node": cfg.Name, "ip": cfg.IP.String()}).Printf("added node")
+	c.log.With(Fields{"node": cfg.Name, "ip": cfg.IP.String()}).Debug("added node")
 	node := &ControlledNode{
 		Node:       cfg,
 		DMXBuffer:  buf,
@@ -362,7 +362,7 @@ start:
 	for i := range c.Nodes {
 		if c.Nodes[i].LastSeen.Add(staleAfter).Before(time.Now()) {
 			// it has been more then X seconds since we saw this node. remove it now.
-			c.log.With(Fields{"node": c.Nodes[i].Node.Name, "ip": c.Nodes[i].Node.IP.String()}).Printf("remove stale node")
+			c.log.With(Fields{"node": c.Nodes[i].Node.Name, "ip": c.Nodes[i].Node.IP.String()}).Debug("remove stale node")
 
 			// remove references to this node from the output map
 			for _, port := range c.Nodes[i].Node.OutputPorts {
