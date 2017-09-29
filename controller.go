@@ -87,10 +87,10 @@ type Controller struct {
 }
 
 // NewController return a Controller
-func NewController(name string, ip net.IP) *Controller {
+func NewController(name string, ip net.IP, log Logger) *Controller {
 	return &Controller{
-		cNode: NewNode(name, code.StController, ip),
-		log:   NewLogger(),
+		cNode: NewNode(name, code.StController, ip, log),
+		log:   log,
 	}
 }
 

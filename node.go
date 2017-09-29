@@ -44,7 +44,7 @@ type netPayload struct {
 }
 
 // NewNode return a Node
-func NewNode(name string, style code.StyleCode, ip net.IP) *Node {
+func NewNode(name string, style code.StyleCode, ip net.IP, log Logger) *Node {
 	n := &Node{
 		Config: NodeConfig{
 			Name: name,
@@ -52,7 +52,7 @@ func NewNode(name string, style code.StyleCode, ip net.IP) *Node {
 		},
 		conn:     nil,
 		shutdown: true,
-		log:      NewLogger().With(Fields{"type": "Node"}),
+		log:      log.With(Fields{"type": "Node"}),
 	}
 	if len(ip) > 0 {
 		n.Config.IP = ip

@@ -20,7 +20,7 @@ type logger struct {
 }
 
 // NewLogger returns a Logger based on logrus
-func NewLogger() Logger {
+func NewDefaultLogger() Logger {
 	log := &struct {
 		*logrus.Logger
 	}{
@@ -44,6 +44,11 @@ func NewLogger() Logger {
 	// Disable concurrency mutex as we use Stdout
 	log.SetNoLock()
 	return &logger{Entry: log.WithFields(nil)}
+}
+
+// NewLogger creates a new logger from given logrus logger
+func NewLogger(log *logrus.Entry) Logger {
+	return &logger{log}
 }
 
 // With will add the fields to the formatted log entry
