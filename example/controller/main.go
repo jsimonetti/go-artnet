@@ -29,7 +29,8 @@ func main() {
 		}
 	}
 
-	c := artnet.NewController("controller-1", ip)
+	log := artnet.NewDefaultLogger()
+	c := artnet.NewController("controller-1", ip, log)
 	var wg sync.WaitGroup
 	go func() {
 		wg.Add(1)
