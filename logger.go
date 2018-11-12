@@ -3,7 +3,7 @@ package artnet
 import (
 	"os"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Fields are a representation of formatted log fields
