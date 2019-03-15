@@ -213,13 +213,12 @@ func (n *Node) recvLoop() {
 	for {
 		select {
 		case payload := <-n.recvCh:
-			//if payload.err == nil {
 			p, err := packet.Unmarshal(payload.data)
-			if err == nil {
-				// if this is a valid packet we handle it
-				go n.handlePacket(p)
+			if err != nil {
+				n.log.Printf("failed to parse packet: %v", err)
+				continue
 			}
-			//}
+			go n.handlePacket(p)
 
 		case <-n.shutdownCh:
 			return
