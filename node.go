@@ -95,7 +95,12 @@ func (n *Node) Start() error {
 		return err
 	}
 
-	n.conn, err = net.ListenPacket("udp4", "0.0.0.0:6454")
+	rcvListenAddress := "0.0.0.0:6454"
+	if len(n.Config.IP) > 0 {
+		rcvListenAddress = fmt.Sprintf("%v:6454", n.Config.IP.String())
+	}
+
+	n.conn, err = net.ListenPacket("udp4", rcvListenAddress)
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
 		n.log.With(Fields{"error": err}).Error("error net.ListenUDP")
@@ -215,7 +220,7 @@ func (n *Node) recvLoop() {
 		case payload := <-n.recvCh:
 			p, err := packet.Unmarshal(payload.data)
 			if err != nil {
-				n.log.Printf("failed to parse packet: %v", err)
+				n.log.Printf("failed to parse packet from %s: %v", payload.address.String(), err)
 				continue
 			}
 			go n.handlePacket(p)
