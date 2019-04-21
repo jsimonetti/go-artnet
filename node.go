@@ -95,12 +95,7 @@ func (n *Node) Start() error {
 		return err
 	}
 
-	rcvListenAddress := "0.0.0.0:6454"
-	if len(n.Config.IP) > 0 {
-		rcvListenAddress = fmt.Sprintf("%v:6454", n.Config.IP.String())
-	}
-
-	n.conn, err = net.ListenPacket("udp4", rcvListenAddress)
+	n.conn, err = net.ListenPacket("udp4", "0.0.0.0:6454")
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
 		n.log.With(Fields{"error": err}).Error("error net.ListenUDP")
