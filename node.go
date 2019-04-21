@@ -228,7 +228,7 @@ func (n *Node) recvLoop() {
 		case payload := <-n.recvCh:
 			p, err := packet.Unmarshal(payload.data)
 			if err != nil {
-				n.log.Printf("failed to parse packet from %s: %v", payload.address.String(), err)
+				n.log.With(Fields{"src": payload.address.IP.String()}).Debugf("failed to parse packet: %v", err)
 				continue
 			}
 			go n.handlePacket(p)
