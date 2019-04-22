@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -103,6 +104,9 @@ func (n *Node) Start() error {
 		n.log.With(Fields{"error": err}).Error("error net.DialUDP")
 		return err
 	}
+	_, port, _ := net.SplitHostPort(n.bconn.LocalAddr().String())
+	porti, _ := strconv.Atoi(port)
+	n.Config.Port = uint16(porti)
 
 	n.conn, err = net.ListenPacket("udp4", "0.0.0.0:6454")
 	if err != nil {
