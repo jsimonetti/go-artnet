@@ -68,10 +68,26 @@ type NodeConfig struct {
 func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 	// create an ArtPollReply packet to send out with the ArtPoll packet
 	p := &packet.ArtPollReplyPacket{
-		OpCode: code.OpPollReply,
-		Port:   c.Port,
+		OpCode:      code.OpPollReply,
+		Port:        c.Port,
+		Oem:         c.OEM,
+		VersionInfo: c.Version,
+		UBEAVersion: c.BiosVersion,
+		Style:       c.Type,
+		BindIndex:   c.BindIndex,
+		Status1:     c.Status1,
+		Status2:     c.Status2,
+		NetSwitch:   c.BaseAddress.Net,
+		SubSwitch:   c.BaseAddress.SubUni,
 	}
 	copy(p.IPAddress[0:4], c.IP.To4())
+	copy(p.ESTAmanufacturer[0:2], c.Manufacturer)
+	copy(p.ShortName[0:18], c.Name)
+	copy(p.LongName[0:64], c.Description)
+	copy(p.NodeReport[0:64], c.Report)
+	copy(p.BindIP[0:4], c.BindIP.To4())
+	copy(p.Macaddress[0:6], c.Ethernet)
+
 	return p
 }
 
