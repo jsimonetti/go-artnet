@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 
@@ -69,11 +68,21 @@ func (n *Node) Stop() {
 	n.shutdownLock.Unlock()
 	close(n.shutdownCh)
 	if n.conn != nil {
-		n.conn.Close()
+		if err := n.conn.Close(); err != nil {
+			n.log.Printf("failed to close read socket: %v")
+		}
 	}
 	if n.bconn != nil {
-		n.bconn.Close()
+		if err := n.bconn.Close(); err != nil {
+			n.log.Printf("failed to close write socket: %v")
+		}
 	}
+}
+
+func (n *Node) isShutdown() bool {
+	n.shutdownLock.Lock()
+	defer n.shutdownLock.Unlock()
+	return n.shutdown
 }
 
 // Start will start the controller
@@ -104,9 +113,6 @@ func (n *Node) Start() error {
 		n.log.With(Fields{"error": err}).Error("error net.DialUDP")
 		return err
 	}
-	_, port, _ := net.SplitHostPort(n.bconn.LocalAddr().String())
-	porti, _ := strconv.Atoi(port)
-	n.Config.Port = uint16(porti)
 
 	n.conn, err = net.ListenPacket("udp4", "0.0.0.0:6454")
 	if err != nil {
@@ -126,7 +132,7 @@ func (n *Node) Start() error {
 func (n *Node) pollReplyLoop() {
 	var timer time.Ticker
 
-	// loop untill shutdown
+	// loop until shutdown
 	for {
 		select {
 		case <-timer.C:
@@ -147,28 +153,30 @@ func (n *Node) pollReplyLoop() {
 
 // sendLoop is used to send packets to the network
 func (n *Node) sendLoop() {
-	// loop untill shutdown
+	// loop until shutdown
 	for {
 		select {
-		case payload := <-n.sendCh:
-			n.shutdownLock.Lock()
-			if !n.shutdown {
-				var num int
-				var err error
-				if payload.address.IP.Equal(broadcastAddr.IP) {
-					num, err = n.bconn.Write(payload.data)
-				} else {
-					num, err = n.conn.WriteTo(payload.data, &payload.address)
-				}
-				if err != nil {
-					n.log.With(Fields{"error": err}).Debugf("error writing packet")
-					continue
-				}
-				n.log.With(Fields{"dst": payload.address.String(), "bytes": num}).Debugf("packet sent")
-			}
-			n.shutdownLock.Unlock()
 		case <-n.shutdownCh:
 			return
+
+		case payload := <-n.sendCh:
+			if n.isShutdown() {
+				return
+			}
+
+			var num int
+			var err error
+			if payload.address.IP.Equal(broadcastAddr.IP) {
+				num, err = n.bconn.Write(payload.data)
+			} else {
+				num, err = n.conn.WriteTo(payload.data, &payload.address)
+			}
+			if err != nil {
+				n.log.With(Fields{"error": err}).Debugf("error writing packet")
+				continue
+			}
+			n.log.With(Fields{"dst": payload.address.String(), "bytes": num}).Debugf("packet sent")
+
 		}
 	}
 }
@@ -191,38 +199,36 @@ func (n *Node) recvLoop() {
 		b := make([]byte, 4096)
 		for {
 			num, src, err := n.conn.ReadFrom(b)
-			n.shutdownLock.Lock()
-			if !n.shutdown {
-				n.shutdownLock.Unlock()
-				from := AddrToUDPAddr(src)
-				if n.bconn != nil && n.bconn.LocalAddr() == src {
-					// this was sent by me, so we ignore it
-					//n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("ignoring received packet from self")
-					continue
-				}
+			if n.isShutdown() {
+				return
+			}
 
-				n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("received packet")
-				if err != nil && err != io.EOF {
-					n.recvCh <- netPayload{
-						address: from,
-						data:    b[:num],
-						err:     err,
-					}
-					continue
-				}
-				n.recvCh <- netPayload{
-					address: from,
-					data:    b[:num],
-					err:     err,
-				}
+			from := AddrToUDPAddr(src)
+			if n.bconn != nil && n.bconn.LocalAddr() == src {
+				// this was sent by me, so we ignore it
+				//n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("ignoring received packet from self")
 				continue
 			}
-			n.shutdownLock.Unlock()
-			return
+
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+
+				n.log.With(Fields{"src": from.String(), "bytes": num}).Errorf("failed to read from socket: %v", err)
+				continue
+			}
+
+			n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("received packet")
+			n.recvCh <- netPayload{
+				address: from,
+				data:    b[:num],
+				err:     err,
+			}
 		}
 	}()
 
-	// loop untill shutdown
+	// loop until shutdown
 	for {
 		select {
 		case payload := <-n.recvCh:

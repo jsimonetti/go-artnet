@@ -17,7 +17,7 @@ var broadcastAddr = net.UDPAddr{
 }
 
 // we poll for new nodes every 3 seconds
-var pollInterval = 3
+var pollInterval = 3 * time.Second
 
 // ControlledNode hols the configuration of a node we control
 type ControlledNode struct {
@@ -101,13 +101,12 @@ func (c *Controller) Start() error {
 	c.shutdownCh = make(chan struct{})
 	c.cNode.log = c.log.With(Fields{"type": "Node"})
 	c.log = c.log.With(Fields{"type": "Controller"})
-	c.cNode.Start()
+	if err := c.cNode.Start(); err != nil {
+		return fmt.Errorf("failed to start controller node: %v", err)
+	}
 
-	tickInterval, _ := time.ParseDuration(fmt.Sprintf("%ds", pollInterval))
-	c.pollTicker = time.NewTicker(tickInterval)
-
-	gcInterval, _ := time.ParseDuration(fmt.Sprintf("%ds", pollInterval))
-	c.gcTicker = time.NewTicker(gcInterval)
+	c.pollTicker = time.NewTicker(pollInterval)
+	c.gcTicker = time.NewTicker(pollInterval)
 
 	go c.pollLoop()
 	go c.dmxUpdateLoop()
@@ -118,13 +117,12 @@ func (c *Controller) Start() error {
 func (c *Controller) Stop() {
 	c.pollTicker.Stop()
 	c.gcTicker.Stop()
-
 	c.cNode.Stop()
+
 	select {
 	case <-c.cNode.shutdownCh:
-		goto end
 	}
-end:
+
 	close(c.shutdownCh)
 }
 
@@ -162,7 +160,7 @@ func (c *Controller) pollLoop() {
 		data:    me,
 	}
 
-	// loop untill shutdown
+	// loop until shutdown
 	for {
 		select {
 		case <-c.pollTicker.C:
@@ -235,7 +233,7 @@ func (c *Controller) dmxUpdateLoop() {
 	updateTicker := time.NewTicker(250 * time.Millisecond)
 	updateAfter := 800 * time.Millisecond
 
-	// loop untill shutdown
+	// loop until shutdown
 	for {
 		select {
 		case <-updateTicker.C:
