@@ -53,8 +53,8 @@ func (p *Header) unmarshal(b []byte) error {
 		return errIncorrectHeaderLength
 	}
 	p.ID = [8]byte{b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]}
-	p.OpCode = code.OpCode(binary.LittleEndian.Uint16([]byte{b[8], b[9]}))
 
+	p.OpCode = code.OpCode(binary.LittleEndian.Uint16([]byte{b[8], b[9]}))
 	if p.OpCode != code.OpPollReply {
 		p.Version = [2]byte{b[10], b[11]}
 	}
@@ -67,23 +67,29 @@ func (p *Header) validate() error {
 		return errInvalidPacket
 	}
 
-	// according to the protocol specification the ArtPollReply package is the only one which does NOT send the protocol
-	// version as the third information after the ID and the OpCode but insteads sends the IP (which leads to the condition
-	// to be true when the second IP octet is >= 14)
-	if p.OpCode != code.OpPollReply && p.Version[1] < version.Bytes()[1] {
-		return fmt.Errorf("incompatible version. want: =>14, got: %d", p.Version[1])
+	if p.OpCode != code.OpPollReply {
+		p.swapOpCode()
+
+		// according to the protocol specification the ArtPollReply package is the only one which does NOT send the protocol
+		// version as the third information after the ID and the OpCode but insteads sends the IP (which leads to the condition
+		// to be true when the second IP octet is >= 14)
+		if p.Version[1] < version.Bytes()[1] {
+			return fmt.Errorf("incompatible version. want: =>14, got: %d", p.Version[1])
+		}
 	}
 
-	// swap endianness
-	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
 	return nil
 }
 
 // finish is used to finish the Packet for sending.
 func (p *Header) finish() {
 	p.ID = ArtNet
-	p.OpCode = code.OpCode(uint16(p.OpCode&0xff) + uint16(p.OpCode>>8))
 	p.Version = version.Bytes()
+	p.swapOpCode()
+}
+
+func (p *Header) swapOpCode() {
+	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
 }
 
 func marshalPacket(p ArtNetPacket) ([]byte, error) {
