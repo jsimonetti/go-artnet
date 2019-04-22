@@ -182,7 +182,14 @@ func (c *Controller) pollLoop() {
 
 		case p := <-c.cNode.pollReplyCh:
 			cfg := ConfigFromArtPollReply(p)
-			c.updateNode(cfg)
+			if cfg.Type != code.StNode {
+				// we don't care for ArtNet devices other then nodes for now @todo
+				continue
+			}
+
+			if err := c.updateNode(cfg); err != nil {
+				c.log.With(Fields{"err": err}).Error("error updating node")
+			}
 
 		case <-c.shutdownCh:
 			return
