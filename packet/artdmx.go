@@ -93,7 +93,7 @@ func (p *ArtDMXPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtDMXPacket) finish() {
-	p.OpCode = code.OpCode(swapUint16(uint16(code.OpDMX)))
 	p.Length = 512
+	p.OpCode = code.OpDMX
 	p.Header.finish()
 }

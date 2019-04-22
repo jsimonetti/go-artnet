@@ -16,7 +16,7 @@ type Address struct {
 
 // String returns a string representation of Address
 func (a Address) String() string {
-	return fmt.Sprintf("%d:%d.%d", a.Net, (a.SubUni >> 4), a.SubUni&0x0f)
+	return fmt.Sprintf("%d:%d.%d", a.Net, a.SubUni>>4, a.SubUni&0x0f)
 }
 
 // Integer returns the integer representation of Address
@@ -61,6 +61,34 @@ type NodeConfig struct {
 	BaseAddress Address
 	InputPorts  []InputPort
 	OutputPorts []OutputPort
+}
+
+// ArtPollReplyFromConfig will return a ArtPollReplyPacket from the NodeConfig
+// TODO: make this a more complete packet by adding the other NodeConfig fields
+func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
+	p := &packet.ArtPollReplyPacket{
+		OpCode:      code.OpPollReply,
+		Port:        packet.ArtNetPort,
+		Oem:         c.OEM,
+		VersionInfo: c.Version,
+		UBEAVersion: c.BiosVersion,
+		Style:       c.Type,
+		BindIndex:   c.BindIndex,
+		Status1:     c.Status1,
+		Status2:     c.Status2,
+		NetSwitch:   c.BaseAddress.Net,
+		SubSwitch:   c.BaseAddress.SubUni,
+	}
+
+	copy(p.IPAddress[0:4], c.IP.To4())
+	copy(p.ESTAmanufacturer[0:2], c.Manufacturer)
+	copy(p.ShortName[0:18], c.Name)
+	copy(p.LongName[0:64], c.Description)
+	copy(p.NodeReport[0:64], c.Report)
+	copy(p.BindIP[0:4], c.BindIP.To4())
+	copy(p.Macaddress[0:6], c.Ethernet)
+
+	return p
 }
 
 // ConfigFromArtPollReply will return a Config from the information in the ArtPollReplyPacket
@@ -113,7 +141,7 @@ func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
 	return nodeConfig
 }
 
-// decodeString will take a byteslice and create an ASCII string
+// decodeString will take a byte slice and create an ASCII string
 // the ASCII strings are 0 terminated
 func decodeString(b []byte) (str string) {
 	for _, c := range b {

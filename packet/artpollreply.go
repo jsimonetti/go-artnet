@@ -178,6 +178,8 @@ func (p *ArtPollReplyPacket) validate() error {
 
 // finish is used to finish the Packet for sending.
 func (p *ArtPollReplyPacket) finish() {
+	// ArtPollReply doesn't embed the header struct, so the header.finish method won't set the header fields. To get a
+	// working packet we do it here "manually"
 	p.ID = ArtNet
 	p.OpCode = code.OpCode(swapUint16(uint16(code.OpPollReply)))
 	p.Port = swapUint16(p.Port)

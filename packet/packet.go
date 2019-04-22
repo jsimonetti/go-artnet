@@ -17,7 +17,7 @@ func Unmarshal(b []byte) (p ArtNetPacket, err error) {
 	switch h.OpCode {
 	case code.OpPoll:
 		p = &ArtPollPacket{}
-	case code.OpCode(swapUint16(uint16(code.OpPollReply))):
+	case code.OpPollReply:
 		p = &ArtPollReplyPacket{}
 	case code.OpDiagData:
 		p = &ArtDiagDataPacket{}
