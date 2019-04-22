@@ -87,18 +87,27 @@ func (n *Node) Start() error {
 	n.shutdown = false
 
 	var err error
-
-	n.bconn, err = net.Dial("udp4", "2.255.255.255:6454")
+	laddr := net.UDPAddr{
+		n.Config.IP,
+		0,
+		"",
+	}
+	raddr := net.UDPAddr{
+		net.ParseIP("2.255.255.255"),
+		6454,
+		"",
+	}
+	n.bconn, err = net.DialUDP("udp4", &laddr, &raddr)
 	if err != nil {
-		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
-		n.log.With(Fields{"error": err}).Error("error net.ListenUDP")
+		n.shutdownErr = fmt.Errorf("error net.DialUDP: %s", err)
+		n.log.With(Fields{"error": err}).Error("error net.DialUDP")
 		return err
 	}
 
 	n.conn, err = net.ListenPacket("udp4", "0.0.0.0:6454")
 	if err != nil {
-		n.shutdownErr = fmt.Errorf("error net.ListenUDP: %s", err)
-		n.log.With(Fields{"error": err}).Error("error net.ListenUDP")
+		n.shutdownErr = fmt.Errorf("error net.ListenPacket: %s", err)
+		n.log.With(Fields{"error": err}).Error("error net.ListenPacket")
 		return err
 	}
 
