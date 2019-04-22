@@ -89,14 +89,14 @@ func (n *Node) Start() error {
 
 	var err error
 	laddr := net.UDPAddr{
-		n.Config.IP,
-		0,
-		"",
+		IP:   n.Config.IP,
+		Port: 0,
+		Zone: "",
 	}
 	raddr := net.UDPAddr{
-		net.ParseIP("2.255.255.255"),
-		6454,
-		"",
+		IP:   net.ParseIP("2.255.255.255"),
+		Port: 6454,
+		Zone: "",
 	}
 	n.bconn, err = net.DialUDP("udp4", &laddr, &raddr)
 	if err != nil {
