@@ -220,11 +220,13 @@ func (n *Node) recvLoop() {
 			}
 
 			n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("received packet")
-			n.recvCh <- netPayload{
+			payload := netPayload{
 				address: from,
-				data:    b[:num],
 				err:     err,
+				data:    make([]byte, num),
 			}
+			copy(payload.data, b)
+			n.recvCh <- payload
 		}
 	}()
 
@@ -234,7 +236,10 @@ func (n *Node) recvLoop() {
 		case payload := <-n.recvCh:
 			p, err := packet.Unmarshal(payload.data)
 			if err != nil {
-				n.log.With(Fields{"src": payload.address.IP.String()}).Debugf("failed to parse packet: %v", err)
+				n.log.With(Fields{
+					"src":  payload.address.IP.String(),
+					"data": fmt.Sprintf("%v", payload.data),
+				}).Debugf("failed to parse packet: %v", err)
 				continue
 			}
 			go n.handlePacket(p)
