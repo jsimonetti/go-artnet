@@ -191,7 +191,7 @@ func (n *Node) recvLoop() {
 			if !n.shutdown {
 				n.shutdownLock.Unlock()
 				from := AddrToUDPAddr(src)
-				if n.Config.IP.Equal(from.IP) {
+				if n.bconn != nil && n.bconn.LocalAddr() == src {
 					// this was sent by me, so we ignore it
 					//n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("ignoring received packet from self")
 					continue
