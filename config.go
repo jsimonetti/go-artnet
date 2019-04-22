@@ -63,6 +63,18 @@ type NodeConfig struct {
 	OutputPorts []OutputPort
 }
 
+// ArtPollReplyFromConfig will return a ArtPollReplyPacket from the NodeConfig
+// TODO: make this a more complete packet by adding the other NodeConfig fields
+func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
+	// create an ArtPollReply packet to send out with the ArtPoll packet
+	p := &packet.ArtPollReplyPacket{
+		OpCode: code.OpPollReply,
+		Port:   c.Port,
+	}
+	copy(p.IPAddress[0:4], c.IP.To4())
+	return p
+}
+
 // ConfigFromArtPollReply will return a Config from the information in the ArtPollReplyPacket
 func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
 	nodeConfig := NodeConfig{

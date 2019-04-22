@@ -143,7 +143,8 @@ func (c *Controller) pollLoop() {
 	}
 
 	// create an ArtPollReply packet to send out with the ArtPoll packet
-	me, err := new(packet.ArtPollReplyPacket).MarshalBinary()
+	p := ArtPollReplyFromConfig(c.cNode.Config)
+	me, err := p.MarshalBinary()
 	if err != nil {
 		c.log.With(Fields{"err": err}).Error("error creating ArtPollReply packet for self")
 		return
