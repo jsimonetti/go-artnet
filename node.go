@@ -239,7 +239,7 @@ func (n *Node) recvLoop() {
 				n.log.With(Fields{
 					"src":  payload.address.IP.String(),
 					"data": fmt.Sprintf("%v", payload.data),
-				}).Debugf("failed to parse packet: %v", err)
+				}).Warnf("failed to parse packet: %v", err)
 				continue
 			}
 			go n.handlePacket(p)
@@ -258,6 +258,9 @@ func (n *Node) handlePacket(p packet.ArtNetPacket) {
 		if n.Config.Type == code.StController {
 			n.pollReplyCh <- *p
 		}
+
+	case *packet.ArtPollPacket:
+		// @todo reply to poll packets
 
 	default:
 		n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
