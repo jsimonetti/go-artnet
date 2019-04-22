@@ -68,7 +68,7 @@ type NodeConfig struct {
 func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 	p := &packet.ArtPollReplyPacket{
 		OpCode:      code.OpPollReply,
-		Port:        c.Port,
+		Port:        packet.ArtNetPort,
 		Oem:         c.OEM,
 		VersionInfo: c.Version,
 		UBEAVersion: c.BiosVersion,
