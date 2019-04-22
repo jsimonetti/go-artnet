@@ -16,7 +16,7 @@ type Address struct {
 
 // String returns a string representation of Address
 func (a Address) String() string {
-	return fmt.Sprintf("%d:%d.%d", a.Net, a.SubUni >> 4, a.SubUni&0x0f)
+	return fmt.Sprintf("%d:%d.%d", a.Net, a.SubUni>>4, a.SubUni&0x0f)
 }
 
 // Integer returns the integer representation of Address
