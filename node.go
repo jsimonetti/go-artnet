@@ -136,7 +136,7 @@ func (n *Node) pollReplyLoop() {
 
 		case <-n.pollCh:
 			// reply with pollReply
-			n.log.With(nil).Debug("poll received, now send a reply")
+			n.log.With(nil).Debug("sending ArtPollReply")
 
 			n.sendCh <- netPayload{
 				address: broadcastAddr,

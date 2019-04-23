@@ -140,25 +140,12 @@ func (c *Controller) pollLoop() {
 		return
 	}
 
-	// create an ArtPollReply packet to send out with the ArtPoll packet
-	p := ArtPollReplyFromConfig(c.cNode.Config)
-	me, err := p.MarshalBinary()
-	if err != nil {
-		c.log.With(Fields{"err": err}).Error("error creating ArtPollReply packet for self")
-		return
-	}
-
 	// send ArtPollPacket
 	c.cNode.sendCh <- netPayload{
 		address: broadcastAddr,
 		data:    b,
 	}
-
-	// we should always reply to our own polls to let other controllers know we are here
-	c.cNode.sendCh <- netPayload{
-		address: broadcastAddr,
-		data:    me,
-	}
+	c.cNode.pollCh <- packet.ArtPollPacket{}
 
 	// loop until shutdown
 	for {
@@ -169,12 +156,7 @@ func (c *Controller) pollLoop() {
 				address: broadcastAddr,
 				data:    b,
 			}
-
-			// we should always reply to our own polls to let other controllers know we are here
-			c.cNode.sendCh <- netPayload{
-				address: broadcastAddr,
-				data:    me,
-			}
+			c.cNode.pollCh <- packet.ArtPollPacket{}
 
 		case <-c.gcTicker.C:
 			// clean up old nodes
