@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 	"net"
-	"runtime"
-	"sync"
 	"time"
 
-	artnet "github.com/jsimonetti/go-artnet"
+	"github.com/jsimonetti/go-artnet"
 )
 
 func main() {
@@ -31,23 +29,21 @@ func main() {
 
 	log := artnet.NewDefaultLogger()
 	c := artnet.NewController("controller-1", ip, log)
-	var wg sync.WaitGroup
-	go func() {
-		wg.Add(1)
-		c.Start()
-		wg.Done()
-	}()
-	time.Sleep(10 * time.Second)
-	c.SendDMXToAddress([512]byte{0x00, 0xff, 0x00, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
-	time.Sleep(5 * time.Second)
-	c.SendDMXToAddress([512]byte{0xff, 0x00, 0x00, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
-	time.Sleep(5 * time.Second)
-	c.SendDMXToAddress([512]byte{0x00, 0x00, 0xff, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
-	time.Sleep(5 * time.Second)
-	c.SendDMXToAddress([512]byte{}, artnet.Address{Net: 0, SubUni: 0})
-	time.Sleep(5 * time.Second)
-	c.Stop()
-	wg.Wait()
-	fmt.Printf("num: %d", runtime.NumGoroutine())
+	c.Start()
 
+	go func() {
+		time.Sleep(10 * time.Second)
+		c.SendDMXToAddress([512]byte{0x00, 0xff, 0x00, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
+		time.Sleep(5 * time.Second)
+		c.SendDMXToAddress([512]byte{0xff, 0x00, 0x00, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
+		time.Sleep(5 * time.Second)
+		c.SendDMXToAddress([512]byte{0x00, 0x00, 0xff, 0xff, 0x00}, artnet.Address{Net: 0, SubUni: 0})
+		time.Sleep(5 * time.Second)
+		c.SendDMXToAddress([512]byte{}, artnet.Address{Net: 0, SubUni: 0})
+		time.Sleep(5 * time.Second)
+	}()
+
+	for {
+		time.Sleep(time.Second)
+	}
 }
