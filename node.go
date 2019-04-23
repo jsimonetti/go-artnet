@@ -17,9 +17,10 @@ type Node struct {
 	Config NodeConfig
 
 	// conn is the UDP connection this node will listen on
-	conn   net.PacketConn
-	sendCh chan netPayload
-	recvCh chan netPayload
+	conn      *net.UDPConn
+	localAddr net.UDPAddr
+	sendCh    chan netPayload
+	recvCh    chan netPayload
 
 	// shutdownCh will be closed on shutdown of the node
 	shutdownCh   chan struct{}
@@ -59,6 +60,11 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger) *Node {
 		//ip = GenerateIP()
 	}
 	n.Config.IP = ip
+	n.localAddr = net.UDPAddr{
+		IP:   ip,
+		Port: packet.ArtNetPort,
+		Zone: "",
+	}
 
 	return n
 }
@@ -93,13 +99,13 @@ func (n *Node) Start() error {
 	n.shutdownCh = make(chan struct{})
 	n.shutdown = false
 
-	var err error
-	n.conn, err = net.ListenPacket("udp4", fmt.Sprintf(":%d", packet.ArtNetPort))
+	c, err := net.ListenPacket("udp4", fmt.Sprintf(":%d", packet.ArtNetPort))
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenPacket: %s", err)
 		n.log.With(Fields{"error": err}).Error("error net.ListenPacket")
 		return err
 	}
+	n.conn = c.(*net.UDPConn)
 
 	go n.pollReplyLoop()
 	go n.recvLoop()
@@ -158,7 +164,7 @@ func (n *Node) sendLoop() {
 				return
 			}
 
-			num, err := n.conn.WriteTo(payload.data, &payload.address)
+			num, err := n.conn.WriteToUDP(payload.data, &payload.address)
 			if err != nil {
 				n.log.With(Fields{"error": err}).Debugf("error writing packet")
 				continue
@@ -167,12 +173,6 @@ func (n *Node) sendLoop() {
 
 		}
 	}
-}
-
-// AddrToUDPAddr will turn a net.Addr into a net.UDPAddr
-func AddrToUDPAddr(addr net.Addr) net.UDPAddr {
-	udp := addr.(*net.UDPAddr)
-	return *udp
 }
 
 // recvLoop is used to receive packets from the network
@@ -186,18 +186,17 @@ func (n *Node) recvLoop() {
 	go func() {
 		b := make([]byte, 4096)
 		for {
-			num, src, err := n.conn.ReadFrom(b)
+			num, from, err := n.conn.ReadFromUDP(b)
 			if n.isShutdown() {
 				return
 			}
 
-			if n.conn.LocalAddr() == src {
+			if n.localAddr.IP.Equal(from.IP) {
 				// this was sent by me, so we ignore it
 				//n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("ignoring received packet from self")
 				continue
 			}
 
-			from := AddrToUDPAddr(src)
 			if err != nil {
 				if err == io.EOF {
 					return
@@ -209,7 +208,7 @@ func (n *Node) recvLoop() {
 
 			n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("received packet")
 			payload := netPayload{
-				address: from,
+				address: *from,
 				err:     err,
 				data:    make([]byte, num),
 			}
