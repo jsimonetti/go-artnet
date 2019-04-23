@@ -17,10 +17,10 @@ type Node struct {
 	Config NodeConfig
 
 	// conn is the UDP connection this node will listen on
-	conn   net.PacketConn
-	bconn  net.Conn
-	sendCh chan netPayload
-	recvCh chan netPayload
+	conn      *net.UDPConn
+	localAddr net.UDPAddr
+	sendCh    chan netPayload
+	recvCh    chan netPayload
 
 	// shutdownCh will be closed on shutdown of the node
 	shutdownCh   chan struct{}
@@ -54,10 +54,18 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger) *Node {
 		shutdown: true,
 		log:      log.With(Fields{"type": "Node"}),
 	}
-	if len(ip) > 0 {
-		n.Config.IP = ip
+
+	if len(ip) < 1 {
+		// TODO: generate an IP according to spec
+		//ip = GenerateIP()
 	}
-	//n.Config.IP = GenerateIP()
+	n.Config.IP = ip
+	n.localAddr = net.UDPAddr{
+		IP:   ip,
+		Port: packet.ArtNetPort,
+		Zone: "",
+	}
+
 	return n
 }
 
@@ -70,11 +78,6 @@ func (n *Node) Stop() {
 	if n.conn != nil {
 		if err := n.conn.Close(); err != nil {
 			n.log.Printf("failed to close read socket: %v")
-		}
-	}
-	if n.bconn != nil {
-		if err := n.bconn.Close(); err != nil {
-			n.log.Printf("failed to close write socket: %v")
 		}
 	}
 }
@@ -96,31 +99,15 @@ func (n *Node) Start() error {
 	n.shutdownCh = make(chan struct{})
 	n.shutdown = false
 
-	var err error
-	laddr := net.UDPAddr{
-		IP:   n.Config.IP,
-		Port: 0,
-		Zone: "",
-	}
-	raddr := net.UDPAddr{
-		IP:   net.ParseIP("2.255.255.255"),
-		Port: 6454,
-		Zone: "",
-	}
-	n.bconn, err = net.DialUDP("udp4", &laddr, &raddr)
-	if err != nil {
-		n.shutdownErr = fmt.Errorf("error net.DialUDP: %s", err)
-		n.log.With(Fields{"error": err}).Error("error net.DialUDP")
-		return err
-	}
-
-	n.conn, err = net.ListenPacket("udp4", "0.0.0.0:6454")
+	c, err := net.ListenPacket("udp4", fmt.Sprintf(":%d", packet.ArtNetPort))
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenPacket: %s", err)
 		n.log.With(Fields{"error": err}).Error("error net.ListenPacket")
 		return err
 	}
+	n.conn = c.(*net.UDPConn)
 
+	go n.pollReplyLoop()
 	go n.recvLoop()
 	go n.sendLoop()
 
@@ -132,6 +119,14 @@ func (n *Node) Start() error {
 func (n *Node) pollReplyLoop() {
 	var timer time.Ticker
 
+	// create an ArtPollReply packet to send out in response to an ArtPoll packet
+	p := ArtPollReplyFromConfig(n.Config)
+	me, err := p.MarshalBinary()
+	if err != nil {
+		n.log.With(Fields{"err": err}).Error("error creating ArtPollReply packet for self")
+		return
+	}
+
 	// loop until shutdown
 	for {
 		select {
@@ -139,11 +134,16 @@ func (n *Node) pollReplyLoop() {
 			// if we should regularly send replies (can be requested by the controller)
 			// we send it here
 
-		case poll := <-n.pollCh:
+		case <-n.pollCh:
 			// reply with pollReply
-			n.log.With(Fields{"poll": poll}).Debugf("poll received, now send a reply")
+			n.log.With(nil).Debug("sending ArtPollReply")
 
-			// if we are asked to send changes regularyl, set the Ticker here
+			n.sendCh <- netPayload{
+				address: broadcastAddr,
+				data:    me,
+			}
+
+			// TODO: if we are asked to send changes regularly, set the Ticker here
 
 		case <-n.shutdownCh:
 			return
@@ -164,13 +164,7 @@ func (n *Node) sendLoop() {
 				return
 			}
 
-			var num int
-			var err error
-			if payload.address.IP.Equal(broadcastAddr.IP) {
-				num, err = n.bconn.Write(payload.data)
-			} else {
-				num, err = n.conn.WriteTo(payload.data, &payload.address)
-			}
+			num, err := n.conn.WriteToUDP(payload.data, &payload.address)
 			if err != nil {
 				n.log.With(Fields{"error": err}).Debugf("error writing packet")
 				continue
@@ -179,12 +173,6 @@ func (n *Node) sendLoop() {
 
 		}
 	}
-}
-
-// AddrToUDPAddr will turn a net.Addr into a net.UDPAddr
-func AddrToUDPAddr(addr net.Addr) net.UDPAddr {
-	udp := addr.(*net.UDPAddr)
-	return *udp
 }
 
 // recvLoop is used to receive packets from the network
@@ -198,13 +186,12 @@ func (n *Node) recvLoop() {
 	go func() {
 		b := make([]byte, 4096)
 		for {
-			num, src, err := n.conn.ReadFrom(b)
+			num, from, err := n.conn.ReadFromUDP(b)
 			if n.isShutdown() {
 				return
 			}
 
-			from := AddrToUDPAddr(src)
-			if n.bconn != nil && n.bconn.LocalAddr() == src {
+			if n.localAddr.IP.Equal(from.IP) {
 				// this was sent by me, so we ignore it
 				//n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("ignoring received packet from self")
 				continue
@@ -221,7 +208,7 @@ func (n *Node) recvLoop() {
 
 			n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("received packet")
 			payload := netPayload{
-				address: from,
+				address: *from,
 				err:     err,
 				data:    make([]byte, num),
 			}
@@ -260,7 +247,7 @@ func (n *Node) handlePacket(p packet.ArtNetPacket) {
 		}
 
 	case *packet.ArtPollPacket:
-		// @todo reply to poll packets
+		n.pollCh <- *p
 
 	default:
 		n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
