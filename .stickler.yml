@@ -3,3 +3,6 @@ linters:
     fixer: true
 fixers:
   enable: true
+files:
+  ignore:
+    - '*_string.go'
