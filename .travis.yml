@@ -4,14 +4,6 @@ go:
   - tip
 os:
   - linux
-before_install:
-  - go get golang.org/x/lint/golint
 script:
   - go vet ./...
-  - export GOFMT=$(gofmt -l .)
-  - echo "$GOFMT"
-  - $(exit $(echo -n "$GOFMT" | wc -l))
-  - export GOLINT=$(golint ./... | grep --invert-match -P "(_string.go:)")
-  - echo "$GOLINT"
-  - $(exit $(echo -n "$GOLINT" | wc -l))
   - go test -v ./...
