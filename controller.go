@@ -28,6 +28,7 @@ type ControlledNode struct {
 	Sequence   uint8
 	DMXBuffer  map[Address][512]byte
 	LastUpdate time.Time
+	Stale      bool
 	nodeLock   sync.Mutex
 }
 
@@ -80,18 +81,26 @@ type Controller struct {
 
 	shutdownCh chan struct{}
 
-	log Logger
+	maxFPS int
+	log    Logger
 
 	pollTicker *time.Ticker
 	gcTicker   *time.Ticker
 }
 
 // NewController return a Controller
-func NewController(name string, ip net.IP, log Logger) *Controller {
-	return &Controller{
-		cNode: NewNode(name, code.StController, ip, log),
-		log:   log,
+func NewController(name string, ip net.IP, log Logger, opts ...Option) *Controller {
+	c := &Controller{
+		cNode:  NewNode(name, code.StController, ip, log),
+		log:    log,
+		maxFPS: 50,
 	}
+
+	for _, opt := range opts {
+		c.SetOption(opt)
+	}
+
+	return c
 }
 
 // Start will start this controller
@@ -199,50 +208,51 @@ func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
 		c.log.With(Fields{"err": err, "address": address.String()}).Error("error setting buffer on address")
 		return
 	}
-
-	// get an ArtDMXPacket for this node
-	b, err := cn.dmxUpdate(address)
-	if err != nil {
-		c.log.With(Fields{"err": err}).Error("error getting packet for dmxUpdate")
-		return
-	}
-
-	cn.LastUpdate = time.Now()
-
-	c.cNode.sendCh <- netPayload{
-		address: cn.UDPAddress,
-		data:    b,
-	}
-
 }
 
 // dmxUpdateLoop will periodically update nodes until shutdown
 func (c *Controller) dmxUpdateLoop() {
-	// we force update nodes every 15 seconds
-	updateTicker := time.NewTicker(250 * time.Millisecond)
-	updateAfter := 800 * time.Millisecond
+	fpsInterval := time.Duration(c.maxFPS)
+	ticker := time.NewTicker(time.Second / fpsInterval)
+
+	forceUpdate := 250 * time.Millisecond
+
+	update := func(node *ControlledNode, address Address, now time.Time) error {
+		// get an ArtDMXPacket for this node
+		b, err := node.dmxUpdate(address)
+		if err != nil {
+			return err
+		}
+		node.LastUpdate = now
+		node.Stale = false
+		c.cNode.sendCh <- netPayload{
+			address: node.UDPAddress,
+			data:    b,
+		}
+		return nil
+	}
 
 	// loop until shutdown
 	for {
 		select {
-		case <-updateTicker.C:
-
+		case <-ticker.C:
 			now := time.Now()
 			// send DMX buffer update
 			c.nodeLock.Lock()
 			for address, node := range c.OutputAddress {
 				// only update if it has been X seconds
-				if node.LastUpdate.Add(updateAfter).Before(now) {
-					// get an ArtDMXPacket for this node
-					b, err := node.dmxUpdate(address)
+				if node.Stale && node.LastUpdate.Before(now.Add(-fpsInterval)) {
+					err := update(node, address, now)
 					if err != nil {
 						c.log.With(Fields{"err": err, "address": address.String()}).Error("error getting buffer for address")
-						break
+						continue
 					}
-					node.LastUpdate = now
-					c.cNode.sendCh <- netPayload{
-						address: node.UDPAddress,
-						data:    b,
+				}
+				if node.LastUpdate.Before(now.Add(-forceUpdate)) {
+					err := update(node, address, now)
+					if err != nil {
+						c.log.With(Fields{"err": err, "address": address.String()}).Error("error getting buffer for address")
+						continue
 					}
 				}
 			}
