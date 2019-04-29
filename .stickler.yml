@@ -1,0 +1,8 @@
+linters:
+  golint:
+    fixer: true
+fixers:
+  enable: true
+files:
+  ignore:
+    - '*_string.go'
