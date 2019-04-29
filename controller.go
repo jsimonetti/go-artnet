@@ -208,6 +208,7 @@ func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
 		c.log.With(Fields{"err": err, "address": address.String()}).Error("error setting buffer on address")
 		return
 	}
+	cn.Stale = true
 }
 
 // dmxUpdateLoop will periodically update nodes until shutdown
