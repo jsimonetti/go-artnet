@@ -25,11 +25,15 @@ type ControlledNode struct {
 	Node       NodeConfig
 	UDPAddress net.UDPAddr
 
-	Sequence   uint8
-	DMXBuffer  map[Address][512]byte
+	Sequence  uint8
+	DMXBuffer map[Address]*dmxBuffer
+	nodeLock  sync.Mutex
+}
+
+type dmxBuffer struct {
+	Data       [512]byte
 	LastUpdate time.Time
 	Stale      bool
-	nodeLock   sync.Mutex
 }
 
 // setDMXBuffer will update the buffer on a universe address
@@ -37,16 +41,22 @@ func (cn *ControlledNode) setDMXBuffer(dmx [512]byte, address Address) error {
 	cn.nodeLock.Lock()
 	defer cn.nodeLock.Unlock()
 
-	if _, ok := cn.DMXBuffer[address]; !ok {
+	var buf *dmxBuffer
+	var ok bool
+
+	if buf, ok = cn.DMXBuffer[address]; !ok {
 		return fmt.Errorf("unknown address for controlled node")
 	}
-	cn.DMXBuffer[address] = dmx
+
+	buf.Data = dmx
+	buf.Stale = true
+
 	return nil
 }
 
 // dmxUpdate will create an ArtDMXPacket and marshal it into bytes
 func (cn *ControlledNode) dmxUpdate(address Address) (b []byte, err error) {
-	var buf [512]byte
+	var buf *dmxBuffer
 	var ok bool
 
 	cn.nodeLock.Lock()
@@ -62,7 +72,7 @@ func (cn *ControlledNode) dmxUpdate(address Address) (b []byte, err error) {
 		SubUni:   address.SubUni,
 		Net:      address.Net,
 		Length:   uint16(len(cn.DMXBuffer)),
-		Data:     buf,
+		Data:     buf.Data,
 	}
 	b, err = p.MarshalBinary()
 	return
@@ -93,7 +103,7 @@ func NewController(name string, ip net.IP, log Logger, opts ...Option) *Controll
 	c := &Controller{
 		cNode:  NewNode(name, code.StController, ip, log),
 		log:    log,
-		maxFPS: 50,
+		maxFPS: 1000,
 	}
 
 	for _, opt := range opts {
@@ -208,7 +218,6 @@ func (c *Controller) SendDMXToAddress(dmx [512]byte, address Address) {
 		c.log.With(Fields{"err": err, "address": address.String()}).Error("error setting buffer on address")
 		return
 	}
-	cn.Stale = true
 }
 
 // dmxUpdateLoop will periodically update nodes until shutdown
@@ -224,8 +233,9 @@ func (c *Controller) dmxUpdateLoop() {
 		if err != nil {
 			return err
 		}
-		node.LastUpdate = now
-		node.Stale = false
+		node.DMXBuffer[address].LastUpdate = now
+		node.DMXBuffer[address].Stale = false
+
 		c.cNode.sendCh <- netPayload{
 			address: node.UDPAddress,
 			data:    b,
@@ -242,14 +252,14 @@ func (c *Controller) dmxUpdateLoop() {
 			c.nodeLock.Lock()
 			for address, node := range c.OutputAddress {
 				// only update if it has been X seconds
-				if node.Stale && node.LastUpdate.Before(now.Add(-fpsInterval)) {
+				if node.DMXBuffer[address].Stale && node.DMXBuffer[address].LastUpdate.Before(now.Add(-fpsInterval)) {
 					err := update(node, address, now)
 					if err != nil {
 						c.log.With(Fields{"err": err, "address": address.String()}).Error("error getting buffer for address")
 						continue
 					}
 				}
-				if node.LastUpdate.Before(now.Add(-forceUpdate)) {
+				if node.DMXBuffer[address].LastUpdate.Before(now.Add(-forceUpdate)) {
 					err := update(node, address, now)
 					if err != nil {
 						c.log.With(Fields{"err": err, "address": address.String()}).Error("error getting buffer for address")
@@ -297,9 +307,9 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 	}
 
 	// create an empty DMX buffer. This will blackout the node entirely
-	buf := make(map[Address][512]byte)
+	buf := make(map[Address]*dmxBuffer)
 	for _, port := range cfg.OutputPorts {
-		buf[port.Address] = [512]byte{}
+		buf[port.Address] = &dmxBuffer{}
 	}
 
 	// new node, add it to our known nodes
@@ -310,7 +320,6 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 		LastSeen:   time.Now(),
 		Sequence:   0,
 		UDPAddress: net.UDPAddr{IP: cfg.IP, Port: int(packet.ArtNetPort)},
-		LastUpdate: time.Now(),
 	}
 	c.Nodes = append(c.Nodes, node)
 

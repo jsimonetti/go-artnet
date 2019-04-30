@@ -19,7 +19,7 @@ type logger struct {
 	*logrus.Entry
 }
 
-// NewLogger returns a Logger based on logrus
+// NewDefaultLogger returns a Logger based on logrus
 func NewDefaultLogger() Logger {
 	log := &struct {
 		*logrus.Logger
