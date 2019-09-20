@@ -77,7 +77,30 @@ func (p *ArtDMXPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtDMXPacket.
 func (p *ArtDMXPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
+	if len(b) < 18 {
+		return errInvalidPacket
+	}
+
+	if err := p.Header.unmarshal(b[:12]); err != nil {
+		return err
+	}
+
+	p.Sequence = b[12]
+	p.Physical = b[13]
+	p.SubUni = b[14]
+	p.Net = b[15]
+
+	// Length is high byte first
+	p.Length = uint16(b[16])*uint16(256) + uint16(b[17])
+	l := int(p.Length)
+
+	// Given length must not exceed the slice length and must be an even number between 2 and 512.
+	if len(b) < l+18 || l < 2 || l > 512 || l%2 != 0 {
+		return errInvalidPacket
+	}
+	copy(p.Data[0:l], b[18:18+l])
+
+	return nil
 }
 
 // validate is used to validate the Packet.
