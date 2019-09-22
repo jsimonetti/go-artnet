@@ -11,6 +11,9 @@ import (
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
+// NodeCallbackFn gets called when a new packet has been received and needs to be processed
+type NodeCallbackFn func(p *packet.ArtNetPacket) error
+
 // Node is the information known about a node
 type Node struct {
 	// Config holds the configuration of this node
@@ -34,6 +37,8 @@ type Node struct {
 	pollReplyCh chan packet.ArtPollReplyPacket
 
 	log Logger
+
+	callbacks map[code.OpCode]NodeCallbackFn
 }
 
 // netPayload contains bytes read from the network and/or an error
