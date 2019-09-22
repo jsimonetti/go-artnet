@@ -1,6 +1,7 @@
 package artnet
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -234,7 +235,13 @@ func (n *Node) recvLoop() {
 				}).Warnf("failed to parse packet: %v", err)
 				continue
 			}
-			go n.handlePacket(p)
+
+			// at this point we assume that p contains an
+			// unmarshalled packet that must have a valid
+			// opcode which we can now extract and handle
+			// the packet by calling the corresponding
+			// callback
+			go n.handlePacket(p, code.OpCode(binary.BigEndian.Uint16([]byte{payload.data[8], payload.data[9]})))
 
 		case <-n.shutdownCh:
 			return
