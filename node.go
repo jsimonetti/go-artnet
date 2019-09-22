@@ -288,3 +288,28 @@ func (n *Node) handlePacketPollReply(p packet.ArtNetPacket) {
 		n.pollReplyCh <- *pollReply
 	}
 }
+
+// RegisterCallback stores the given callback which will be called when a
+// packet with the given opcode arrives. This registration function can
+// only register callbacks before the node has been started. Calling this
+// function multiple times replaces every previous callback.
+func (n *Node) RegisterCallback(opcode code.OpCode, callback NodeCallbackFn) {
+	if !n.shutdown {
+		n.log.With(Fields{"opcode": opcode}).Debugf("ignoring callback registration: node has already been started")
+		return
+	}
+
+	n.callbacks[opcode] = callback
+}
+
+// DeregisterCallback deletes a callback stored for the given opcode. This
+// deregistration function can only deregister callbacks before the node
+// has been started.
+func (n *Node) DeregisterCallback(opcode code.OpCode) {
+	if !n.shutdown {
+		n.log.With(Fields{"opcode": opcode}).Debugf("ignoring callback registration: node has already been started")
+		return
+	}
+
+	delete(n.callbacks, opcode)
+}
