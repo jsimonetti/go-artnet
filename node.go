@@ -61,6 +61,12 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger) *Node {
 		log:      log.With(Fields{"type": "Node"}),
 	}
 
+	// initialize required node callbacks
+	n.callbacks = map[code.OpCode]NodeCallbackFn{
+		code.OpPoll:      n.handlePacketPoll,
+		code.OpPollReply: n.handlePacketPollReply,
+	}
+
 	if len(ip) < 1 {
 		// TODO: generate an IP according to spec
 		//ip = GenerateIP()
