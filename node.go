@@ -12,7 +12,7 @@ import (
 )
 
 // NodeCallbackFn gets called when a new packet has been received and needs to be processed
-type NodeCallbackFn func(p *packet.ArtNetPacket)
+type NodeCallbackFn func(p packet.ArtNetPacket)
 
 // Node is the information known about a node
 type Node struct {
