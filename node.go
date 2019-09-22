@@ -250,21 +250,14 @@ func (n *Node) recvLoop() {
 }
 
 // handlePacket contains the logic for dealing with incoming packets
-func (n *Node) handlePacket(p packet.ArtNetPacket) {
-	switch p := p.(type) {
-	case *packet.ArtPollReplyPacket:
-		// only handle these packets if we are a controller
-		if n.Config.Type == code.StController {
-			n.pollReplyCh <- *p
-		}
-
-	case *packet.ArtPollPacket:
-		n.pollCh <- *p
-
-	default:
-		n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
+func (n *Node) handlePacket(p packet.ArtNetPacket, opCode code.OpCode) {
+	callback, ok := n.callbacks[opCode]
+	if !ok {
+		n.log.With(Fields{"packet": p}).Debugf("ignoring unhandled packet")
+		return
 	}
 
+	callback(p)
 }
 
 func (n *Node) handlePacketPoll(p packet.ArtNetPacket) {
