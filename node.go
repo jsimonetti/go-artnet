@@ -259,3 +259,20 @@ func (n *Node) handlePacket(p packet.ArtNetPacket) {
 	}
 
 }
+
+func (n *Node) handlePacketPoll(p packet.ArtNetPacket) {
+	poll, ok := p.(*packet.ArtPollPacket)
+	if ok {
+		n.pollCh <- *poll
+	}
+}
+
+func (n *Node) handlePacketPollReply(p packet.ArtNetPacket) {
+	// only handle these packets if we are a controller
+	if n.Config.Type == code.StController {
+		pollReply, ok := p.(*packet.ArtPollReplyPacket)
+		if ok {
+			n.pollReplyCh <- *pollReply
+		}
+	}
+}
