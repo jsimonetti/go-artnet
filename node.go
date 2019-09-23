@@ -294,7 +294,7 @@ func (n *Node) handlePacketPollReply(p packet.ArtNetPacket) {
 // only register callbacks before the node has been started. Calling this
 // function multiple times replaces every previous callback.
 func (n *Node) RegisterCallback(opcode code.OpCode, callback NodeCallbackFn) {
-	if !n.shutdown {
+	if !n.isShutdown() {
 		n.log.With(Fields{"opcode": opcode}).Debugf("ignoring callback registration: node has already been started")
 		return
 	}
@@ -306,7 +306,7 @@ func (n *Node) RegisterCallback(opcode code.OpCode, callback NodeCallbackFn) {
 // deregistration function can only deregister callbacks before the node
 // has been started.
 func (n *Node) DeregisterCallback(opcode code.OpCode) {
-	if !n.shutdown {
+	if !n.isShutdown() {
 		n.log.With(Fields{"opcode": opcode}).Debugf("ignoring callback registration: node has already been started")
 		return
 	}
