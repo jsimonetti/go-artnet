@@ -1,6 +1,7 @@
 package artnet
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -10,6 +11,9 @@ import (
 	"github.com/jsimonetti/go-artnet/packet"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
+
+// NodeCallbackFn gets called when a new packet has been received and needs to be processed
+type NodeCallbackFn func(p packet.ArtNetPacket)
 
 // Node is the information known about a node
 type Node struct {
@@ -34,6 +38,8 @@ type Node struct {
 	pollReplyCh chan packet.ArtPollReplyPacket
 
 	log Logger
+
+	callbacks map[code.OpCode]NodeCallbackFn
 }
 
 // netPayload contains bytes read from the network and/or an error
@@ -53,6 +59,12 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger) *Node {
 		conn:     nil,
 		shutdown: true,
 		log:      log.With(Fields{"type": "Node"}),
+	}
+
+	// initialize required node callbacks
+	n.callbacks = map[code.OpCode]NodeCallbackFn{
+		code.OpPoll:      n.handlePacketPoll,
+		code.OpPollReply: n.handlePacketPollReply,
 	}
 
 	if len(ip) < 1 {
@@ -229,7 +241,13 @@ func (n *Node) recvLoop() {
 				}).Warnf("failed to parse packet: %v", err)
 				continue
 			}
-			go n.handlePacket(p)
+
+			// at this point we assume that p contains an
+			// unmarshalled packet that must have a valid
+			// opcode which we can now extract and handle
+			// the packet by calling the corresponding
+			// callback
+			go n.handlePacket(p, code.OpCode(binary.BigEndian.Uint16([]byte{payload.data[8], payload.data[9]})))
 
 		case <-n.shutdownCh:
 			return
@@ -238,19 +256,60 @@ func (n *Node) recvLoop() {
 }
 
 // handlePacket contains the logic for dealing with incoming packets
-func (n *Node) handlePacket(p packet.ArtNetPacket) {
-	switch p := p.(type) {
-	case *packet.ArtPollReplyPacket:
-		// only handle these packets if we are a controller
-		if n.Config.Type == code.StController {
-			n.pollReplyCh <- *p
-		}
-
-	case *packet.ArtPollPacket:
-		n.pollCh <- *p
-
-	default:
-		n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
+func (n *Node) handlePacket(p packet.ArtNetPacket, opCode code.OpCode) {
+	callback, ok := n.callbacks[opCode]
+	if !ok {
+		n.log.With(Fields{"packet": p}).Debugf("ignoring unhandled packet")
+		return
 	}
 
+	callback(p)
+}
+
+func (n *Node) handlePacketPoll(p packet.ArtNetPacket) {
+	poll, ok := p.(*packet.ArtPollPacket)
+	if !ok {
+		n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
+		return
+	}
+
+	n.pollCh <- *poll
+}
+
+func (n *Node) handlePacketPollReply(p packet.ArtNetPacket) {
+	// only handle these packets if we are a controller
+	if n.Config.Type == code.StController {
+		pollReply, ok := p.(*packet.ArtPollReplyPacket)
+		if !ok {
+			n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
+			return
+		}
+
+		n.pollReplyCh <- *pollReply
+	}
+}
+
+// RegisterCallback stores the given callback which will be called when a
+// packet with the given opcode arrives. This registration function can
+// only register callbacks before the node has been started. Calling this
+// function multiple times replaces every previous callback.
+func (n *Node) RegisterCallback(opcode code.OpCode, callback NodeCallbackFn) {
+	if !n.isShutdown() {
+		n.log.With(Fields{"opcode": opcode}).Debugf("ignoring callback registration: node has already been started")
+		return
+	}
+
+	n.callbacks[opcode] = callback
+}
+
+// DeregisterCallback deletes a callback stored for the given opcode. This
+// deregistration function can only deregister callbacks before the node
+// has been started.
+func (n *Node) DeregisterCallback(opcode code.OpCode) {
+	if !n.isShutdown() {
+		n.log.With(Fields{"opcode": opcode}).Debugf("ignoring callback registration: node has already been started")
+		return
+	}
+
+	delete(n.callbacks, opcode)
 }
