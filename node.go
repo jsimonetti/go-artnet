@@ -1,7 +1,6 @@
 package artnet
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -247,7 +246,7 @@ func (n *Node) recvLoop() {
 			// opcode which we can now extract and handle
 			// the packet by calling the corresponding
 			// callback
-			go n.handlePacket(p, code.OpCode(binary.BigEndian.Uint16([]byte{payload.data[8], payload.data[9]})))
+			go n.handlePacket(p)
 
 		case <-n.shutdownCh:
 			return
@@ -256,8 +255,8 @@ func (n *Node) recvLoop() {
 }
 
 // handlePacket contains the logic for dealing with incoming packets
-func (n *Node) handlePacket(p packet.ArtNetPacket, opCode code.OpCode) {
-	callback, ok := n.callbacks[opCode]
+func (n *Node) handlePacket(p packet.ArtNetPacket) {
+	callback, ok := n.callbacks[p.GetOpCode()]
 	if !ok {
 		n.log.With(Fields{"packet": p}).Debugf("ignoring unhandled packet")
 		return
