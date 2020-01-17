@@ -139,6 +139,11 @@ func NewArtPollReplyPacket() *ArtPollReplyPacket {
 	return &ArtPollReplyPacket{}
 }
 
+// GetOpCode returns the OpCode parsed by validate method
+func (p *ArtPollReplyPacket) GetOpCode() code.OpCode {
+	return p.OpCode
+}
+
 // MarshalBinary marshals an ArtPollReplyPacket into a byte slice.
 func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 	return marshalPacket(p)

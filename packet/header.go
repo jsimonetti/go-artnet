@@ -26,6 +26,7 @@ type ArtNetPacket interface {
 	encoding.BinaryUnmarshaler
 	validate() error
 	finish()
+	GetOpCode() code.OpCode
 }
 
 // ArtNet is the fixed string "Art-Net" terminated with a zero
@@ -46,6 +47,11 @@ type Header struct {
 
 	// Version of this packet
 	Version [2]byte
+}
+
+// GetOpCode returns the OpCode parsed by validate method
+func (p *Header) GetOpCode() code.OpCode {
+	return p.OpCode
 }
 
 func (p *Header) unmarshal(b []byte) error {
