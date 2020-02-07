@@ -183,8 +183,16 @@ func (c *Controller) pollLoop() {
 
 		case p := <-c.cNode.pollReplyCh:
 			cfg := ConfigFromArtPollReply(p)
-			if cfg.Type != code.StNode {
-				// we don't care for ArtNet devices other then nodes for now @todo
+
+			if cfg.Type != code.StNode && cfg.Type != code.StController {
+				// we don't care for ArtNet devices other then nodes and controllers for now @todo
+				continue
+			}
+
+			if cfg.Type == code.StController && len(cfg.OutputPorts) == 0 {
+				// we don't care for controllers which do not have output ports for now // @todo
+				// otherwise we simply treat controllers like nodes unless controller to controller
+				// communication is implemented according to Art-Net specification
 				continue
 			}
 
@@ -251,6 +259,9 @@ func (c *Controller) dmxUpdateLoop() {
 			// send DMX buffer update
 			c.nodeLock.Lock()
 			for address, node := range c.OutputAddress {
+				if node.DMXBuffer[address] == nil {
+					node.DMXBuffer[address] = &dmxBuffer{}
+				}
 				// only update if it has been X seconds
 				if node.DMXBuffer[address].Stale && node.DMXBuffer[address].LastUpdate.Before(now.Add(-fpsInterval)) {
 					err := update(node, address, now)
@@ -284,7 +295,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 
 	for i := range c.Nodes {
 		if bytes.Equal(cfg.IP, c.Nodes[i].Node.IP) {
-			// update this node, since we allready know about it
+			// update this node, since we already know about it
 			c.log.With(Fields{"node": cfg.Name, "ip": cfg.IP.String()}).Debug("updated node")
 			// remove references to this node from the output map
 			for _, port := range c.Nodes[i].Node.OutputPorts {
@@ -319,7 +330,7 @@ func (c *Controller) updateNode(cfg NodeConfig) error {
 		DMXBuffer:  buf,
 		LastSeen:   time.Now(),
 		Sequence:   0,
-		UDPAddress: net.UDPAddr{IP: cfg.IP, Port: int(packet.ArtNetPort)},
+		UDPAddress: net.UDPAddr{IP: cfg.IP, Port: packet.ArtNetPort},
 	}
 	c.Nodes = append(c.Nodes, node)
 
