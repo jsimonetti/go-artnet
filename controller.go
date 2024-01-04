@@ -11,7 +11,7 @@ import (
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
-var broadcastAddr = net.UDPAddr{
+var defaultBroadcastAddr = net.UDPAddr{
 	IP:   []byte{0x02, 0xff, 0xff, 0xff},
 	Port: int(packet.ArtNetPort),
 }
@@ -89,6 +89,8 @@ type Controller struct {
 	InputAddress  map[Address]*ControlledNode
 	nodeLock      sync.Mutex
 
+	broadcastAddr net.UDPAddr
+
 	shutdownCh chan struct{}
 
 	maxFPS int
@@ -101,9 +103,10 @@ type Controller struct {
 // NewController return a Controller
 func NewController(name string, ip net.IP, log Logger, opts ...Option) *Controller {
 	c := &Controller{
-		cNode:  NewNode(name, code.StController, ip, log),
-		log:    log,
-		maxFPS: 1000,
+		cNode:         NewNode(name, code.StController, ip, log),
+		log:           log,
+		maxFPS:        1000,
+		broadcastAddr: defaultBroadcastAddr,
 	}
 
 	for _, opt := range opts {
@@ -161,7 +164,7 @@ func (c *Controller) pollLoop() {
 
 	// send ArtPollPacket
 	c.cNode.sendCh <- netPayload{
-		address: broadcastAddr,
+		address: c.broadcastAddr,
 		data:    b,
 	}
 	c.cNode.pollCh <- packet.ArtPollPacket{}
@@ -172,7 +175,7 @@ func (c *Controller) pollLoop() {
 		case <-c.pollTicker.C:
 			// send ArtPollPacket
 			c.cNode.sendCh <- netPayload{
-				address: broadcastAddr,
+				address: c.broadcastAddr,
 				data:    b,
 			}
 			c.cNode.pollCh <- packet.ArtPollPacket{}
