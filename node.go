@@ -19,6 +19,8 @@ type Node struct {
 	// Config holds the configuration of this node
 	Config NodeConfig
 
+	broadcastAddr net.UDPAddr
+
 	// conn is the UDP connection this node will listen on
 	conn      *net.UDPConn
 	localAddr net.UDPAddr
@@ -49,15 +51,20 @@ type netPayload struct {
 }
 
 // NewNode return a Node
-func NewNode(name string, style code.StyleCode, ip net.IP, log Logger) *Node {
+func NewNode(name string, style code.StyleCode, ip net.IP, log Logger, opts ...NodeOption) *Node {
 	n := &Node{
 		Config: NodeConfig{
 			Name: name,
 			Type: style,
 		},
-		conn:     nil,
-		shutdown: true,
-		log:      log.With(Fields{"type": "Node"}),
+		broadcastAddr: defaultBroadcastAddr,
+		conn:          nil,
+		shutdown:      true,
+		log:           log.With(Fields{"type": "Node"}),
+	}
+
+	for _, opt := range opts {
+		n.SetOption(opt)
 	}
 
 	// initialize required node callbacks
@@ -150,7 +157,7 @@ func (n *Node) pollReplyLoop() {
 			n.log.With(nil).Debug("sending ArtPollReply")
 
 			n.sendCh <- netPayload{
-				address: broadcastAddr,
+				address: n.broadcastAddr,
 				data:    me,
 			}
 
