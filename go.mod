@@ -1,4 +1,4 @@
-module github.com/72nd/go-artnet
+module github.com/jsimonetti/go-artnet
 
 go 1.13
 
