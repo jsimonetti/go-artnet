@@ -87,6 +87,10 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger, opts ...N
 	return n
 }
 
+func (n *Node) Connection() *net.UDPConn {
+	return n.conn
+}
+
 // Stop will stop all running routines and close the network connection
 func (n *Node) Stop() {
 	n.shutdownLock.Lock()
