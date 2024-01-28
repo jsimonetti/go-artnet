@@ -93,12 +93,31 @@ func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 	return p
 }
 
-// NumberOfPorts returns the count of node ports.
+// NumberOfPorts returns the count of node ports. This method assumes that
+// NodeConfig is validated.
 func (c NodeConfig) NumberOfPorts() uint16 {
 	if len(c.InputPorts) > len(c.OutputPorts) {
 		return uint16(len(c.InputPorts))
 	}
 	return uint16(len(c.OutputPorts))
+}
+
+// PortType merges the InputPorts and OutputPorts config into a single PortTypes
+// definition. This method assumes that NodeConfig is validated.
+func (c NodeConfig) PortTypes() [4]code.PortType {
+	rsl := [4]code.PortType{}
+	for i := 0; i < 4; i++ {
+		tmp := code.PortType(0)
+		if len(c.InputPorts) > i {
+			tmp = tmp.WithInput(true)
+			rsl[i] = tmp.WithType(c.InputPorts[i].Type.Type())
+		}
+		if len(c.OutputPorts) > i {
+			tmp = tmp.WithOutput(true)
+			rsl[i] = tmp.WithType(c.OutputPorts[i].Type.Type())
+		}
+	}
+	return rsl
 }
 
 // validate will check the config and return an error if something is not valid.
