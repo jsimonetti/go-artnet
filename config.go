@@ -135,7 +135,7 @@ func (c NodeConfig) validate() error {
 		return fmt.Errorf("validation error: more than 4 output ports configured (%d) for the node, this isn't supported by the library", len(c.InputPorts))
 	}
 	for i := 0; i < 4; i++ {
-		if len(c.InputPorts) < i || len(c.OutputPorts) < i {
+		if len(c.InputPorts) <= i || len(c.OutputPorts) <= i {
 			continue
 		}
 		if c.InputPorts[i].Type.Type() != c.OutputPorts[i].Type.Type() {
