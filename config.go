@@ -78,6 +78,7 @@ func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 		Status2:     c.Status2,
 		NetSwitch:   c.BaseAddress.Net,
 		SubSwitch:   c.BaseAddress.SubUni,
+		NumPorts:    c.NumberOfPorts(),
 	}
 
 	copy(p.IPAddress[0:4], c.IP.To4())
@@ -89,6 +90,14 @@ func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 	copy(p.Macaddress[0:6], c.Ethernet)
 
 	return p
+}
+
+// NumberOfPorts returns the count of node ports.
+func (c NodeConfig) NumberOfPorts() uint16 {
+	if len(c.InputPorts) > len(c.OutputPorts) {
+		return uint16(len(c.InputPorts))
+	}
+	return uint16(len(c.OutputPorts))
 }
 
 // validate will check the config and return an error if something is not valid.
