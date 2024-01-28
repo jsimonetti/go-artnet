@@ -91,6 +91,20 @@ func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 	return p
 }
 
+// validate will check the config and return an error if something is not valid.
+// This method is needed as currently only for in- and/or output ports can be
+// announced on the Art-Net network but the user can define an arbitrary number of
+// InputPorts and/or OutputPorts.
+func (c NodeConfig) validate() error {
+	if len(c.InputPorts) > 4 {
+		return fmt.Errorf("more than 4 input ports configured (%d) for the node, this isn't supported by the library", len(c.InputPorts))
+	}
+	if len(c.OutputPorts) > 4 {
+		return fmt.Errorf("more than 4 output ports configured (%d) for the node, this isn't supported by the library", len(c.InputPorts))
+	}
+	return nil
+}
+
 // ConfigFromArtPollReply will return a Config from the information in the ArtPollReplyPacket
 func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
 	nodeConfig := NodeConfig{
