@@ -97,10 +97,10 @@ func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 // InputPorts and/or OutputPorts.
 func (c NodeConfig) validate() error {
 	if len(c.InputPorts) > 4 {
-		return fmt.Errorf("more than 4 input ports configured (%d) for the node, this isn't supported by the library", len(c.InputPorts))
+		return fmt.Errorf("validation error: more than 4 input ports configured (%d) for the node, this isn't supported by the library", len(c.InputPorts))
 	}
 	if len(c.OutputPorts) > 4 {
-		return fmt.Errorf("more than 4 output ports configured (%d) for the node, this isn't supported by the library", len(c.InputPorts))
+		return fmt.Errorf("validation error: more than 4 output ports configured (%d) for the node, this isn't supported by the library", len(c.InputPorts))
 	}
 	return nil
 }
