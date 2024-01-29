@@ -1,6 +1,10 @@
 package artnet
 
-import "net"
+import (
+	"net"
+
+	"github.com/jsimonetti/go-artnet/packet"
+)
 
 // Option is a functional option handler for Controller.
 type Option func(*Controller) error
@@ -26,6 +30,20 @@ func BroadcastAddr(addr net.UDPAddr) Option {
 	}
 }
 
+// ListenAddr sets the listen address and port to use; defaults to :6454 if unset
+func ListenAddress(addr net.UDPAddr) Option {
+	return func(c *Controller) error {
+		return NodeListenAddress(addr)(c.cNode)
+	}
+}
+
+// ListenIP sets the listen IP to use; defaults to :6454 if unset
+func ListenIP(ip net.IP) Option {
+	return func(c *Controller) error {
+		return NodeListenIP(ip)(c.cNode)
+	}
+}
+
 // NodeOption is a functional option handler for Node.
 type NodeOption func(*Node) error
 
@@ -38,6 +56,22 @@ func (n *Node) SetOption(option NodeOption) error {
 func NodeBroadcastAddress(addr net.UDPAddr) NodeOption {
 	return func(n *Node) error {
 		n.broadcastAddr = addr
+		return nil
+	}
+}
+
+// NodeListenAddress sets the listen address and port to use; defaults to :6454 if unset
+func NodeListenAddress(addr net.UDPAddr) NodeOption {
+	return func(n *Node) error {
+		n.listenAddr = addr
+		return nil
+	}
+}
+
+// NodeListenIP sets the listen IP to use; defaults to :6454 if unset
+func NodeListenIP(ip net.IP) NodeOption {
+	return func(n *Node) error {
+		n.listenAddr = net.UDPAddr{IP: ip, Port: packet.ArtNetPort}
 		return nil
 	}
 }
