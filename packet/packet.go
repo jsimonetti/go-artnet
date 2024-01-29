@@ -36,58 +36,38 @@ func Unmarshal(b []byte) (p ArtNetPacket, err error) {
 		p = &ArtAddressPacket{}
 	case code.OpInput:
 		return nil, notImplErr
-	case code.OpTodRequest:
-		return nil, notImplErr
-	case code.OpTodData:
-		return nil, notImplErr
-	case code.OpTodControl:
-		return nil, notImplErr
-	case code.OpRdm:
-		return nil, notImplErr
-	case code.OpRdmSub:
-		return nil, notImplErr
-	case code.OpMedia:
-		return nil, notImplErr
-	case code.OpMediaPatch:
-		return nil, notImplErr
-	case code.OpMediaControl:
-		return nil, notImplErr
-	case code.OpMediaContrlReply:
-		return nil, notImplErr
 	case code.OpTimeCode:
 		p = &ArtTimeCodePacket{}
-	case code.OpTimeSync:
-		return nil, notImplErr
 	case code.OpTrigger:
 		p = &ArtTriggerPacket{}
-	case code.OpDirectory:
-		return nil, notImplErr
-	case code.OpDirectoryReply:
-		return nil, notImplErr
-	case code.OpVideoSetup:
-		return nil, notImplErr
-	case code.OpVideoPalette:
-		return nil, notImplErr
-	case code.OpVideoData:
-		return nil, notImplErr
-	case code.OpMacMaster:
-		return nil, notImplErr
-	case code.OpMacSlave:
-		return nil, notImplErr
-	case code.OpFirmwareMaster:
-		return nil, notImplErr
-	case code.OpFirmwareReply:
-		return nil, notImplErr
-	case code.OpFileTnMaster:
-		return nil, notImplErr
-	case code.OpFileFnMaster:
-		return nil, notImplErr
-	case code.OpFileFnReply:
-		return nil, notImplErr
 	case code.OpIPProg:
 		p = &ArtIPProgPacket{}
 	case code.OpIPProgReply:
 		p = &ArtIPProgReplyPacket{}
+	case
+		code.OpDirectory,
+		code.OpDirectoryReply,
+		code.OpFileFnMaster,
+		code.OpFileFnReply,
+		code.OpFileTnMaster,
+		code.OpFirmwareMaster,
+		code.OpFirmwareReply,
+		code.OpMacMaster,
+		code.OpMacSlave,
+		code.OpMedia,
+		code.OpMediaContrlReply,
+		code.OpMediaControl,
+		code.OpMediaPatch,
+		code.OpRdm,
+		code.OpRdmSub,
+		code.OpTimeSync,
+		code.OpTodControl,
+		code.OpTodData,
+		code.OpVideoData,
+		code.OpVideoPalette,
+		code.OpVideoSetup,
+		code.OpTodRequest:
+		return nil, notImplErr
 	default:
 		return nil, notImplErr
 	}
