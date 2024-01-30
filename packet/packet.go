@@ -67,9 +67,9 @@ func Unmarshal(b []byte) (p ArtNetPacket, err error) {
 		code.OpVideoPalette,
 		code.OpVideoSetup,
 		code.OpTodRequest:
-		return nil, notImplErr
+		return nil, fmt.Errorf("%w %#v", errNotImplementedOpCode, h.OpCode)
 	default:
-		return nil, notImplErr
+		return nil, fmt.Errorf("%w %#v", errInvalidOpCode, h.OpCode)
 	}
 
 	err = p.UnmarshalBinary(b)
