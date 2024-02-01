@@ -69,10 +69,6 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger, opts ...N
 		n.SetOption(opt)
 	}
 
-	for _, opt := range opts {
-		n.SetOption(opt)
-	}
-
 	// initialize required node callbacks
 	n.callbacks = map[code.OpCode]NodeCallbackFn{
 		code.OpPoll:      n.handlePacketPoll,
