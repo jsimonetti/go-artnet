@@ -14,6 +14,8 @@ func Unmarshal(b []byte) (p ArtNetPacket, err error) {
 		return
 	}
 
+	notImplErr := fmt.Errorf("unimplemented opcode %#v found", h.OpCode)
+
 	switch h.OpCode {
 	case code.OpPoll:
 		p = &ArtPollPacket{}
@@ -33,38 +35,41 @@ func Unmarshal(b []byte) (p ArtNetPacket, err error) {
 	case code.OpAddress:
 		p = &ArtAddressPacket{}
 	case code.OpInput:
-	case code.OpTodRequest:
-	case code.OpTodData:
-	case code.OpTodControl:
-	case code.OpRdm:
-	case code.OpRdmSub:
-	case code.OpMedia:
-	case code.OpMediaPatch:
-	case code.OpMediaControl:
-	case code.OpMediaContrlReply:
+		return nil, notImplErr
 	case code.OpTimeCode:
 		p = &ArtTimeCodePacket{}
-	case code.OpTimeSync:
 	case code.OpTrigger:
 		p = &ArtTriggerPacket{}
-	case code.OpDirectory:
-	case code.OpDirectoryReply:
-	case code.OpVideoSetup:
-	case code.OpVideoPalette:
-	case code.OpVideoData:
-	case code.OpMacMaster:
-	case code.OpMacSlave:
-	case code.OpFirmwareMaster:
-	case code.OpFirmwareReply:
-	case code.OpFileTnMaster:
-	case code.OpFileFnMaster:
-	case code.OpFileFnReply:
 	case code.OpIPProg:
 		p = &ArtIPProgPacket{}
 	case code.OpIPProgReply:
 		p = &ArtIPProgReplyPacket{}
+	case
+		code.OpDirectory,
+		code.OpDirectoryReply,
+		code.OpFileFnMaster,
+		code.OpFileFnReply,
+		code.OpFileTnMaster,
+		code.OpFirmwareMaster,
+		code.OpFirmwareReply,
+		code.OpMacMaster,
+		code.OpMacSlave,
+		code.OpMedia,
+		code.OpMediaContrlReply,
+		code.OpMediaControl,
+		code.OpMediaPatch,
+		code.OpRdm,
+		code.OpRdmSub,
+		code.OpTimeSync,
+		code.OpTodControl,
+		code.OpTodData,
+		code.OpVideoData,
+		code.OpVideoPalette,
+		code.OpVideoSetup,
+		code.OpTodRequest:
+		return nil, fmt.Errorf("%w %#v", errNotImplementedOpCode, h.OpCode)
 	default:
-		return nil, fmt.Errorf("unimplemented opcode %#v found", h.OpCode)
+		return nil, fmt.Errorf("%w %#v", errInvalidOpCode, h.OpCode)
 	}
 
 	err = p.UnmarshalBinary(b)

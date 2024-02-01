@@ -18,6 +18,7 @@ var (
 	errInvalidPacket         = errors.New("invalid Art-Net packet")
 	errInvalidOpCode         = errors.New("invalid OpCode in packet")
 	errInvalidStyleCode      = errors.New("invalid StyleCode in packet")
+	errNotImplementedOpCode  = errors.New("not implemented OpCode in packet")
 )
 
 // ArtNetPacket is the interface used for passing around different kinds of ArtNet packets.
