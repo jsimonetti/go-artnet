@@ -14,9 +14,10 @@ var _ ArtNetPacket = &ArtPollReplyPacket{}
 // is also broadcast to the Directed Broadcast address by all Art-Net devices on power up.
 //
 // Packet Strategy:
-//  All devices - Receive:            No Art-Net action.
-//                Unicast Transmit:   Not Allowed.
-//                Broadcast Transmit: Directed Broadcasts this packet in response to an ArtPoll.
+//
+//	All devices - Receive:            No Art-Net action.
+//	              Unicast Transmit:   Not Allowed.
+//	              Broadcast Transmit: Directed Broadcasts this packet in response to an ArtPoll.
 type ArtPollReplyPacket struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
 	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
@@ -119,7 +120,9 @@ type ArtPollReplyPacket struct {
 
 	// Macaddress of the Node. Set to zero if node cannot supply this information.
 	Macaddress [6]byte
+}
 
+type ArtPollReplyPacketExtension struct {
 	// BindIP is the IP of the root device if this unit is part of a larger or modular product.
 	BindIP [4]byte
 

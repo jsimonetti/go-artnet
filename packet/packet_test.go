@@ -52,7 +52,6 @@ func TestUnmarshal(t *testing.T) {
 				SwOut:            [4]uint8{},
 				Style:            code.StController,
 				Macaddress:       [6]uint8{},
-				BindIP:           [4]uint8{},
 			},
 		},
 		{
