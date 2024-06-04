@@ -19,7 +19,7 @@ var defaultBroadcastAddr = net.UDPAddr{
 // we poll for new nodes every 3 seconds
 var pollInterval = 3 * time.Second
 
-// ControlledNode hols the configuration of a node we control
+// ControlledNode holds the configuration of a node we control
 type ControlledNode struct {
 	LastSeen   time.Time
 	Node       NodeConfig
