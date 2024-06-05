@@ -120,9 +120,12 @@ type ArtPollReplyPacket struct {
 
 	// Macaddress of the Node. Set to zero if node cannot supply this information.
 	Macaddress [6]byte
-}
 
-type ArtPollReplyPacketExtension struct {
+	// ============================================================================================
+	//                                  Optional Fields - 32 Bytes
+	//                   (only 207 bytes required for backwards compatibility)
+	// ============================================================================================
+
 	// BindIP is the IP of the root device if this unit is part of a larger or modular product.
 	BindIP [4]byte
 
@@ -133,9 +136,27 @@ type ArtPollReplyPacketExtension struct {
 	// Status2 indicates Product capabilities
 	Status2 code.Status2
 
+	// GoodOutputB defines output status of the node
+	GoodOutputB [4]byte
+
+	// Status3 indicates general product state
+	Status3 code.Status3
+
+	// DefaultResponderUID
+	DefaultResponderUID [6]byte
+
+	// User is available for user Specific Data
+	User [2]byte
+
+	// RefreshRate specify the maximum refresh rate, expressed in Hz
+	// Designed to allow refresh rates above DMX512 rate
+	RefreshRate uint16
+
 	// Filler bytes. Transmit as zero. For future expansion.
-	_ [26]byte
+	_ [11]byte
 }
+
+const maximumArtPollReplyPacketSize int = 207 + 32
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
 func NewArtPollReplyPacket() *ArtPollReplyPacket {
@@ -154,6 +175,10 @@ func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
 func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
+	if len(b) < maximumArtPollReplyPacketSize {
+		padding := make([]byte, maximumArtPollReplyPacketSize-len(b))
+		b = append(b, padding...)
+	}
 	return unmarshalPacket(p, b)
 }
 
