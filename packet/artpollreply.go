@@ -156,7 +156,10 @@ type ArtPollReplyPacket struct {
 	_ [11]byte
 }
 
-const maximumArtPollReplyPacketSize int = 207 + 32
+const (
+	minimumArtPollReplyPacketSize int = 207
+	maximumArtPollReplyPacketSize int = minimumArtPollReplyPacketSize + 32
+)
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
 func NewArtPollReplyPacket() *ArtPollReplyPacket {
@@ -175,6 +178,10 @@ func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
 func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
+	if len(b) < minimumArtPollReplyPacketSize {
+		return fmt.Errorf("packet was below minimum size: %d, got: %d", minimumArtPollReplyPacketSize, len(b))
+	}
+
 	if len(b) < maximumArtPollReplyPacketSize {
 		padding := make([]byte, maximumArtPollReplyPacketSize-len(b))
 		b = append(b, padding...)
