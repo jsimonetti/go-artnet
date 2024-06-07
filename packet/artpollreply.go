@@ -77,7 +77,7 @@ type ArtPollReplyPacket struct {
 
 	// NodeReport is a textual report of the Node’s operating status or operational errors.
 	// It is primarily intended for ‘engineering’ data.
-	NodeReport [64]code.NodeReportCode
+	NodeReport code.NodeReport
 
 	// NumPorts describes the number of input or output ports. If number of inputs is not
 	// equal to number of outputs, the largest value is taken. Zero is a legal value if no

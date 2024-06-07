@@ -44,7 +44,7 @@ func TestUnmarshal(t *testing.T) {
 				ESTAmanufacturer: [2]uint8{},
 				ShortName:        [18]uint8{0x62, 0x61, 0x72, 0x61, 0x64, 0x64, 0x75, 0x72},
 				LongName:         [64]uint8{},
-				NodeReport:       [64]code.NodeReportCode{},
+				NodeReport:       code.NodeReport{},
 				PortTypes:        [4]code.PortType{},
 				GoodInput:        [4]code.GoodInput{},
 				GoodOutput:       [4]code.GoodOutput{},

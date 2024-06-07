@@ -54,7 +54,7 @@ type NodeConfig struct {
 	BindIndex uint8
 	Port      uint16
 
-	Report  []code.NodeReportCode
+	Report  code.NodeReport
 	Status1 code.Status1
 	Status2 code.Status2
 	Status3 code.Status3
@@ -88,7 +88,7 @@ func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 	copy(p.ESTAmanufacturer[0:2], c.Manufacturer)
 	copy(p.ShortName[0:18], c.Name)
 	copy(p.LongName[0:64], c.Description)
-	copy(p.NodeReport[0:64], c.Report)
+	copy(p.NodeReport[0:64], c.Report[0:64])
 	copy(p.BindIP[0:4], c.BindIP.To4())
 	copy(p.Macaddress[0:6], c.Ethernet)
 
@@ -163,7 +163,7 @@ func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
 		Type:         p.Style,
 		Name:         decodeString(p.ShortName[:]),
 		Description:  decodeString(p.LongName[:]),
-		Report:       p.NodeReport[:],
+		Report:       p.NodeReport,
 		Ethernet:     p.Macaddress[:],
 		IP:           p.IPAddress[:],
 		BindIP:       p.BindIP[:],
