@@ -28,26 +28,28 @@ var _ ArtNetPacket = &ArtTriggerPacket{}
 // However, when the Oem field = 0xffff the meaning of the Key, SubKey and Payload is:
 //
 // Key - Name     - SubKey:
-//   0 - KeyAscii - The SubKey field contains an ASCII character which the receiving device should
-//                  process as if it were a keyboard press. (Payload not used).
-//   1 - KeyMacro - The SubKey field contains the number of a Macro which the receiving device
-//                  should execute. (Payload not used).
-//   2 - KeySoft  - The SubKey field contains a soft-key number which the receiving device should
-//                  process as if it were a soft-key keyboard press. (Payload not used).
-//   3 - KeyShow  - The SubKey field contains the number of a Show which the receiving device
-//                  should run. (Payload not used).
-//   4 - - 255      Undefined
+//
+//	0 - KeyAscii - The SubKey field contains an ASCII character which the receiving device should
+//	               process as if it were a keyboard press. (Payload not used).
+//	1 - KeyMacro - The SubKey field contains the number of a Macro which the receiving device
+//	               should execute. (Payload not used).
+//	2 - KeySoft  - The SubKey field contains a soft-key number which the receiving device should
+//	               process as if it were a soft-key keyboard press. (Payload not used).
+//	3 - KeyShow  - The SubKey field contains the number of a Show which the receiving device
+//	               should run. (Payload not used).
+//	4 - - 255      Undefined
 //
 // Packet Strategy:
-//  Controller -  Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
-//  Node -        Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
-//  MediaServer - Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
+//
+//	Controller -  Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
+//	Node -        Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
+//	MediaServer - Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
 type ArtTriggerPacket struct {
 	// Inherit the Header header
 	Header
@@ -70,7 +72,9 @@ type ArtTriggerPacket struct {
 
 // NewArtTriggerPacket returns an ArtNetPacket with the correct OpCode
 func NewArtTriggerPacket() *ArtTriggerPacket {
-	return &ArtTriggerPacket{}
+	return &ArtTriggerPacket{
+		Header: NewHeader(code.OpTrigger),
+	}
 }
 
 // MarshalBinary marshals an ArtTriggerPacket into a byte slice.
@@ -80,21 +84,10 @@ func (p *ArtTriggerPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtTriggerPacket.
 func (p *ArtTriggerPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtTriggerPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpTrigger {
-		return errInvalidOpCode
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtTriggerPacket) finish() {
-	p.Header.finish()
+	return p.Header.validate(code.OpTrigger)
 }

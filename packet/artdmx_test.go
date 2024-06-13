@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 func TestArtDMXPacketMarshal(t *testing.T) {
@@ -19,11 +18,8 @@ func TestArtDMXPacketMarshal(t *testing.T) {
 		{
 			name: "Empty",
 			p: ArtDMXPacket{
-				Header: Header{
-					ID:      ArtNet,
-					OpCode:  code.OpDMX,
-					Version: version.Bytes(),
-				},
+				Header: NewHeader(code.OpDMX),
+				Length: 512,
 			},
 			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x50, 0x00, 0x0e, 0x00, 0x00, 0x00, 0x00,
@@ -65,12 +61,9 @@ func TestArtDMXPacketMarshal(t *testing.T) {
 		{
 			name: "DMXControl3-WithCh123to255",
 			p: ArtDMXPacket{
-				Header: Header{
-					ID:      ArtNet,
-					OpCode:  code.OpDMX,
-					Version: version.Bytes(),
-				},
+				Header:   NewHeader(code.OpDMX),
 				Sequence: 63,
+				Length:   512,
 				Data:     [512]byte{0xff, 0xff, 0xff},
 			},
 			b: []byte{
@@ -134,36 +127,28 @@ func TestArtDMXPacketUnmarshal(t *testing.T) {
 	tests := []struct {
 		name string
 		p    ArtDMXPacket
-		b    [4096]byte
+		b    []byte
 		err  error
 	}{
 		{
 			name: "Empty",
 			p: ArtDMXPacket{
-				Header: Header{
-					ID:      ArtNet,
-					OpCode:  code.OpDMX,
-					Version: version.Bytes(),
-				},
+				Header: NewHeader(code.OpDMX),
 			},
-			b: [4096]byte{
+			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x50, 0x00, 0x0e, 0x00, 0x00, 0x00, 0x00,
 			},
-			err: errInvalidPacket,
+			err: errInvalidPacketMin,
 		},
 		{
 			name: "DMXControl3-WithCh123to255",
 			p: ArtDMXPacket{
-				Header: Header{
-					ID:      ArtNet,
-					OpCode:  code.OpDMX,
-					Version: version.Bytes(),
-				},
+				Header:   NewHeader(code.OpDMX),
 				Sequence: 63,
 				Length:   512,
 				Data:     [512]byte{0xff, 0xff, 0xff},
 			},
-			b: [4096]byte{
+			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x50, 0x00, 0x0e, 0x3f, 0x00, 0x00, 0x00,
 				0x02, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -203,18 +188,14 @@ func TestArtDMXPacketUnmarshal(t *testing.T) {
 		{
 			name: "Short-WithCh123to255",
 			p: ArtDMXPacket{
-				Header: Header{
-					ID:      ArtNet,
-					OpCode:  code.OpDMX,
-					Version: version.Bytes(),
-				},
+				Header:   NewHeader(code.OpDMX),
 				Sequence: 63,
 				Length:   4,
-				Data:     [512]byte{0xff, 0xff, 0xff, 0x00},
+				Data:     [512]byte{0xff, 0xff, 0xff, 0xff},
 			},
-			b: [4096]byte{
+			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x50, 0x00, 0x0e, 0x3f, 0x00, 0x00, 0x00,
-				0x00, 0x04, 0xff, 0xff, 0xff,
+				0x00, 0x04, 0xff, 0xff, 0xff, 0xff,
 			},
 		},
 	}

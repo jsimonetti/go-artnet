@@ -13,15 +13,16 @@ var _ ArtNetPacket = &ArtDiagDataPacket{}
 // destination to which these messages should be sent.
 //
 // Packet Strategy:
-//  Controller -  Receive:            Application Specific
-//                Unicast Transmit:   As defined by ArtPoll
-//                Broadcast Transmit: As defined by ArtPoll
-//  Node -        Receive:            No Action
-//                Unicast Transmit:   As defined by ArtPoll
-//                Broadcast Transmit: As defined by ArtPoll
-//  MediaServer - Receive:            No Action
-//                Unicast Transmit:   As defined by ArtPoll
-//                Broadcast Transmit: As defined by ArtPoll
+//
+//	Controller -  Receive:            Application Specific
+//	              Unicast Transmit:   As defined by ArtPoll
+//	              Broadcast Transmit: As defined by ArtPoll
+//	Node -        Receive:            No Action
+//	              Unicast Transmit:   As defined by ArtPoll
+//	              Broadcast Transmit: As defined by ArtPoll
+//	MediaServer - Receive:            No Action
+//	              Unicast Transmit:   As defined by ArtPoll
+//	              Broadcast Transmit: As defined by ArtPoll
 type ArtDiagDataPacket struct {
 	// Inherit the Header header
 	Header
@@ -44,7 +45,9 @@ type ArtDiagDataPacket struct {
 
 // NewArtDiagDataPacket returns an ArtNetPacket with the correct OpCode
 func NewArtDiagDataPacket() *ArtDiagDataPacket {
-	return &ArtDiagDataPacket{}
+	return &ArtDiagDataPacket{
+		Header: NewHeader(code.OpDiagData),
+	}
 }
 
 // MarshalBinary marshals an ArtDiagDataPacket into a byte slice.
@@ -54,21 +57,10 @@ func (p *ArtDiagDataPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtDiagDataPacket.
 func (p *ArtDiagDataPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtDiagDataPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpDiagData {
-		return errInvalidOpCode
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtDiagDataPacket) finish() {
-	p.Header.finish()
+	return p.Header.validate(code.OpDiagData)
 }

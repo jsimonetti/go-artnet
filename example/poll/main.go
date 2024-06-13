@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 
-	artnet "github.com/jsimonetti/go-artnet"
 	"github.com/jsimonetti/go-artnet/packet"
 )
 
@@ -67,8 +66,7 @@ func main() {
 				fmt.Printf("error unmarshalling packet: %s\n", err)
 				continue
 			}
-			cf := artnet.ConfigFromArtPollReply(*p.(*packet.ArtPollReplyPacket))
-			fmt.Printf("got reply: %#v\n", cf)
+			fmt.Printf("got reply: %#v\n", *p.(*packet.ArtPollReplyPacket))
 
 		case <-timer.C:
 			fmt.Printf("timeout reached\n")

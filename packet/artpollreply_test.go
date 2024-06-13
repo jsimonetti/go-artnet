@@ -11,17 +11,13 @@ import (
 func TestArtPollReplyPacketMarshal(t *testing.T) {
 	tests := []struct {
 		name string
-		p    ArtPollReplyPacket
+		p    *ArtPollReplyPacket
 		b    []byte
 		err  error
 	}{
 		{
 			name: "Empty",
-			p: ArtPollReplyPacket{
-				ID:     ArtNet,
-				OpCode: code.OpPollReply,
-				Port:   ArtNetPort,
-			},
+			p:    NewArtPollReplyPacket(),
 			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x21, 0x00, 0x00, 0x00, 0x00, 0x36, 0x19,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -42,19 +38,18 @@ func TestArtPollReplyPacketMarshal(t *testing.T) {
 		},
 		{
 			name: "WithInfo",
-			p: ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]byte{0x0a, 0x01, 0x01, 0x01},
-				Port:             ArtNetPort,
-				VersionInfo:      0xf00d,
-				NetSwitch:        0xeb,
-				SubSwitch:        0xbe,
-				Oem:              0xcccc,
-				UBEAVersion:      0xaa,
-				Status1:          new(code.Status1).WithUBEA(true),
-				ESTAmanufacturer: [2]byte{0xff, 0xff},
-				ShortName:        [18]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6', '7', '8'},
+			p: &ArtPollReplyPacket{
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]byte{0x0a, 0x01, 0x01, 0x01},
+				Port:                 ArtNetPort,
+				VersionInfo:          0xf00d,
+				NetSwitch:            0xeb,
+				SubSwitch:            0xbe,
+				Oem:                  0xcccc,
+				UBEAVersion:          0xaa,
+				Status1:              new(code.Status1).WithUBEA(true),
+				ESTAmanufacturer:     [2]byte{0xff, 0xff},
+				ShortName:            [18]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6', '7', '8'},
 				LongName: [64]byte{
 					'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
 					'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -112,19 +107,18 @@ func TestArtPollReplyPacketMarshal(t *testing.T) {
 		},
 		{
 			name: "ArtNetominator",
-			p: ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]byte{0x0a, 0x0a, 0x01, 0xb6},
-				Port:             ArtNetPort,
-				VersionInfo:      0x0000,
-				NetSwitch:        0x00,
-				SubSwitch:        0x00,
-				Oem:              0xffff,
-				UBEAVersion:      0x00,
-				Status1:          new(code.Status1).WithPortAddr("unused").WithIndicator("normal"),
-				ESTAmanufacturer: [2]byte{0x00, 0x00},
-				ShortName:        [18]byte{'A', 'r', 't', 'N', 'e', 't', 'o', 'm', 'i', 'n', 'a', 't', 'o', 'r'},
+			p: &ArtPollReplyPacket{
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]byte{0x0a, 0x0a, 0x01, 0xb6},
+				Port:                 ArtNetPort,
+				VersionInfo:          0x0000,
+				NetSwitch:            0x00,
+				SubSwitch:            0x00,
+				Oem:                  0xffff,
+				UBEAVersion:          0x00,
+				Status1:              new(code.Status1).WithPortAddr("unused").WithIndicator("normal"),
+				ESTAmanufacturer:     [2]byte{0x00, 0x00},
+				ShortName:            [18]byte{'A', 'r', 't', 'N', 'e', 't', 'o', 'm', 'i', 'n', 'a', 't', 'o', 'r'},
 				LongName: [64]byte{
 					'A', 'r', 't', 'N', 'e', 't', 'o', 'm', 'i', 'n', 'a', 't', 'o', 'r', ' ', 'i',
 					's', ' ', 'w', 'a', 't', 'c', 'h', 'i', 'n', 'g', ' ', 'y', 'o', 'u', '.',
@@ -175,22 +169,21 @@ func TestArtPollReplyPacketMarshal(t *testing.T) {
 		},
 		{
 			name: "SoundlightDMX512",
-			p: ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]byte{0x02, 0xe7, 0x14, 0x24},
-				Port:             ArtNetPort,
-				VersionInfo:      0x000e,
-				NetSwitch:        0x00,
-				SubSwitch:        0x00,
-				Oem:              0x03b0,
-				UBEAVersion:      0x00,
-				Status1:          new(code.Status1).WithPortAddr("net").WithIndicator("normal"),
-				ESTAmanufacturer: [2]byte{0x00, 0x00},
-				ShortName:        [18]byte{'s', 'l', 'e', 's', 'a', '-', 'i', 'p', '1'},
-				LongName:         [64]byte{'s', 'l', 'e', 's', 'a', '-', 'i', 'p', '1'},
-				NumPorts:         0x0001,
-				NodeReport:       code.NodeReport{},
+			p: &ArtPollReplyPacket{
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]byte{0x02, 0xe7, 0x14, 0x24},
+				Port:                 ArtNetPort,
+				VersionInfo:          0x000e,
+				NetSwitch:            0x00,
+				SubSwitch:            0x00,
+				Oem:                  0x03b0,
+				UBEAVersion:          0x00,
+				Status1:              new(code.Status1).WithPortAddr("net").WithIndicator("normal"),
+				ESTAmanufacturer:     [2]byte{0x00, 0x00},
+				ShortName:            [18]byte{'s', 'l', 'e', 's', 'a', '-', 'i', 'p', '1'},
+				LongName:             [64]byte{'s', 'l', 'e', 's', 'a', '-', 'i', 'p', '1'},
+				NumPorts:             0x0001,
+				NodeReport:           code.NodeReport{},
 				PortTypes: [4]code.PortType{
 					new(code.PortType).WithType("DMX512").WithOutput(true),
 				},
@@ -221,22 +214,21 @@ func TestArtPollReplyPacketMarshal(t *testing.T) {
 		},
 		{
 			name: "DMXControl3",
-			p: ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]byte{0xc0, 0xa8, 0x00, 0x0a},
-				Port:             ArtNetPort,
-				VersionInfo:      0x0000,
-				NetSwitch:        0x00,
-				SubSwitch:        0x00,
-				Oem:              0x08b0,
-				UBEAVersion:      0x00,
-				Status1:          new(code.Status1).WithPortAddr("unknown"),
-				ESTAmanufacturer: [2]byte{0x00, 0x00},
-				ShortName:        [18]byte{'D', 'M', 'X', 'C', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M'},
-				LongName:         [64]byte{'D', 'M', 'X', 'C', 'o', 'n', 't', 'r', 'o', 'l', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M', 'O', 'N', 'E', 'T', 'T', 'I', '1', ')'},
-				NodeReport:       code.NewNodeReport(0x01, 0, "libartnet"),
-				NumPorts:         0x0004,
+			p: &ArtPollReplyPacket{
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]byte{0xc0, 0xa8, 0x00, 0x0a},
+				Port:                 ArtNetPort,
+				VersionInfo:          0x0000,
+				NetSwitch:            0x00,
+				SubSwitch:            0x00,
+				Oem:                  0x08b0,
+				UBEAVersion:          0x00,
+				Status1:              new(code.Status1).WithPortAddr("unknown"),
+				ESTAmanufacturer:     [2]byte{0x00, 0x00},
+				ShortName:            [18]byte{'D', 'M', 'X', 'C', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M'},
+				LongName:             [64]byte{'D', 'M', 'X', 'C', 'o', 'n', 't', 'r', 'o', 'l', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M', 'O', 'N', 'E', 'T', 'T', 'I', '1', ')'},
+				NodeReport:           code.NewNodeReport(0x01, 0, "libartnet"),
+				NumPorts:             0x0004,
 				PortTypes: [4]code.PortType{
 					new(code.PortType).WithType("DMX512").WithOutput(true).WithInput(true),
 					new(code.PortType).WithType("DMX512").WithOutput(true).WithInput(true),
@@ -292,18 +284,14 @@ func TestArtPollReplyPacketMarshal(t *testing.T) {
 func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 	tests := []struct {
 		name string
-		p    ArtPollReplyPacket
-		b    [4096]byte
+		p    *ArtPollReplyPacket
+		b    []byte
 		err  error
 	}{
 		{
 			name: "Empty",
-			p: ArtPollReplyPacket{
-				ID:     ArtNet,
-				OpCode: code.OpPollReply,
-				Port:   ArtNetPort,
-			},
-			b: [4096]byte{
+			p:    NewArtPollReplyPacket(),
+			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x21, 0x00, 0x00, 0x00, 0x00, 0x36, 0x19,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -323,19 +311,18 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 		},
 		{
 			name: "WithInfo",
-			p: ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]byte{0x0a, 0x01, 0x01, 0x01},
-				Port:             ArtNetPort,
-				VersionInfo:      0xf00d,
-				NetSwitch:        0xeb,
-				SubSwitch:        0xbe,
-				Oem:              0xcccc,
-				UBEAVersion:      0xaa,
-				Status1:          new(code.Status1).WithUBEA(true),
-				ESTAmanufacturer: [2]byte{0xff, 0xff},
-				ShortName:        [18]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6', '7', '8'},
+			p: &ArtPollReplyPacket{
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]byte{0x0a, 0x01, 0x01, 0x01},
+				Port:                 ArtNetPort,
+				VersionInfo:          0xf00d,
+				NetSwitch:            0xeb,
+				SubSwitch:            0xbe,
+				Oem:                  0xcccc,
+				UBEAVersion:          0xaa,
+				Status1:              new(code.Status1).WithUBEA(true),
+				ESTAmanufacturer:     [2]byte{0xff, 0xff},
+				ShortName:            [18]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6', '7', '8'},
 				LongName: [64]byte{
 					'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
 					'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -373,7 +360,7 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 				BindIndex:  0xee,
 				Status2:    new(code.Status2).WithBrowser(true),
 			},
-			b: [4096]byte{
+			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x21, 0x0a, 0x01, 0x01, 0x01, 0x36, 0x19,
 				0xf0, 0x0d, 0xeb, 0xbe, 0xcc, 0xcc, 0xaa, 0x01, 0xff, 0xff, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36,
 				0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x41, 0x42, 0x43, 0x44,
@@ -393,19 +380,18 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 		},
 		{
 			name: "ArtNetominator",
-			p: ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]byte{0x0a, 0x0a, 0x01, 0xb6},
-				Port:             ArtNetPort,
-				VersionInfo:      0x0000,
-				NetSwitch:        0x00,
-				SubSwitch:        0x00,
-				Oem:              0xffff,
-				UBEAVersion:      0x00,
-				Status1:          new(code.Status1).WithPortAddr("unused").WithIndicator("normal"),
-				ESTAmanufacturer: [2]byte{0x00, 0x00},
-				ShortName:        [18]byte{'A', 'r', 't', 'N', 'e', 't', 'o', 'm', 'i', 'n', 'a', 't', 'o', 'r'},
+			p: &ArtPollReplyPacket{
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]byte{0x0a, 0x0a, 0x01, 0xb6},
+				Port:                 ArtNetPort,
+				VersionInfo:          0x0000,
+				NetSwitch:            0x00,
+				SubSwitch:            0x00,
+				Oem:                  0xffff,
+				UBEAVersion:          0x00,
+				Status1:              new(code.Status1).WithPortAddr("unused").WithIndicator("normal"),
+				ESTAmanufacturer:     [2]byte{0x00, 0x00},
+				ShortName:            [18]byte{'A', 'r', 't', 'N', 'e', 't', 'o', 'm', 'i', 'n', 'a', 't', 'o', 'r'},
 				LongName: [64]byte{
 					'A', 'r', 't', 'N', 'e', 't', 'o', 'm', 'i', 'n', 'a', 't', 'o', 'r', ' ', 'i',
 					's', ' ', 'w', 'a', 't', 'c', 'h', 'i', 'n', 'g', ' ', 'y', 'o', 'u', '.',
@@ -436,7 +422,7 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 				BindIP:     [4]byte{},
 				Status2:    new(code.Status2).WithBrowser(false),
 			},
-			b: [4096]byte{
+			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x21, 0x0a, 0x0a, 0x01, 0xb6, 0x36, 0x19,
 				0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0xf0, 0x00, 0x00, 0x41, 0x72, 0x74, 0x4e, 0x65, 0x74,
 				0x6f, 0x6d, 0x69, 0x6e, 0x61, 0x74, 0x6f, 0x72, 0x00, 0x00, 0x00, 0x00, 0x41, 0x72, 0x74, 0x4e,
@@ -456,22 +442,21 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 		},
 		{
 			name: "SoundlightDMX512",
-			p: ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]byte{0x02, 0xe7, 0x14, 0x24},
-				Port:             ArtNetPort,
-				VersionInfo:      0x000e,
-				NetSwitch:        0x00,
-				SubSwitch:        0x00,
-				Oem:              0x03b0,
-				UBEAVersion:      0x00,
-				Status1:          new(code.Status1).WithPortAddr("net").WithIndicator("normal"),
-				ESTAmanufacturer: [2]byte{0x00, 0x00},
-				ShortName:        [18]byte{'s', 'l', 'e', 's', 'a', '-', 'i', 'p', '1'},
-				LongName:         [64]byte{'s', 'l', 'e', 's', 'a', '-', 'i', 'p', '1'},
-				NumPorts:         0x0001,
-				NodeReport:       code.NodeReport{},
+			p: &ArtPollReplyPacket{
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]byte{0x02, 0xe7, 0x14, 0x24},
+				Port:                 ArtNetPort,
+				VersionInfo:          0x000e,
+				NetSwitch:            0x00,
+				SubSwitch:            0x00,
+				Oem:                  0x03b0,
+				UBEAVersion:          0x00,
+				Status1:              new(code.Status1).WithPortAddr("net").WithIndicator("normal"),
+				ESTAmanufacturer:     [2]byte{0x00, 0x00},
+				ShortName:            [18]byte{'s', 'l', 'e', 's', 'a', '-', 'i', 'p', '1'},
+				LongName:             [64]byte{'s', 'l', 'e', 's', 'a', '-', 'i', 'p', '1'},
+				NumPorts:             0x0001,
+				NodeReport:           code.NodeReport{},
 				PortTypes: [4]code.PortType{
 					new(code.PortType).WithType("DMX512").WithOutput(true),
 				},
@@ -482,7 +467,7 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 				Macaddress: [6]byte{0x00, 0x50, 0xc2, 0x37, 0x14, 0x24},
 				Status2:    new(code.Status2).WithBrowser(false),
 			},
-			b: [4096]byte{
+			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x21, 0x02, 0xe7, 0x14, 0x24, 0x19, 0x36,
 				0x00, 0x0e, 0x00, 0x00, 0x03, 0xb0, 0x00, 0xe0, 0x00, 0x00, 0x73, 0x6c, 0x65, 0x73, 0x61, 0x2d,
 				0x69, 0x70, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x73, 0x6c, 0x65, 0x73,
@@ -502,22 +487,21 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 		},
 		{
 			name: "DMXControl3",
-			p: ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]byte{0xc0, 0xa8, 0x00, 0x0a},
-				Port:             ArtNetPort,
-				VersionInfo:      0x0000,
-				NetSwitch:        0x00,
-				SubSwitch:        0x00,
-				Oem:              0x08b0,
-				UBEAVersion:      0x00,
-				Status1:          new(code.Status1).WithPortAddr("unknown"),
-				ESTAmanufacturer: [2]byte{0x00, 0x00},
-				ShortName:        [18]byte{'D', 'M', 'X', 'C', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M'},
-				LongName:         [64]byte{'D', 'M', 'X', 'C', 'o', 'n', 't', 'r', 'o', 'l', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M', 'O', 'N', 'E', 'T', 'T', 'I', '1', ')'},
-				NodeReport:       code.NewNodeReport(0x01, 0, "libartnet"),
-				NumPorts:         0x0004,
+			p: &ArtPollReplyPacket{
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]byte{0xc0, 0xa8, 0x00, 0x0a},
+				Port:                 ArtNetPort,
+				VersionInfo:          0x0000,
+				NetSwitch:            0x00,
+				SubSwitch:            0x00,
+				Oem:                  0x08b0,
+				UBEAVersion:          0x00,
+				Status1:              new(code.Status1).WithPortAddr("unknown"),
+				ESTAmanufacturer:     [2]byte{0x00, 0x00},
+				ShortName:            [18]byte{'D', 'M', 'X', 'C', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M'},
+				LongName:             [64]byte{'D', 'M', 'X', 'C', 'o', 'n', 't', 'r', 'o', 'l', ' ', '3', ' ', '(', '3', '1', 'J', 'S', 'I', 'M', 'O', 'N', 'E', 'T', 'T', 'I', '1', ')'},
+				NodeReport:           code.NewNodeReport(0x01, 0, "libartnet"),
+				NumPorts:             0x0004,
 				PortTypes: [4]code.PortType{
 					new(code.PortType).WithType("DMX512").WithOutput(true).WithInput(true),
 					new(code.PortType).WithType("DMX512").WithOutput(true).WithInput(true),
@@ -533,7 +517,7 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 				Macaddress: [6]byte{0x3c, 0x97, 0x0e, 0xd7, 0xee, 0x2f},
 				Status2:    new(code.Status2).WithPort15(true),
 			},
-			b: [4096]byte{
+			b: []byte{
 				0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00, 0x00, 0x21, 0xc0, 0xa8, 0x00, 0x0a, 0x36, 0x19,
 				0x00, 0x00, 0x00, 0x00, 0x08, 0xb0, 0x00, 0x00, 0x00, 0x00, 0x44, 0x4d, 0x58, 0x43, 0x20, 0x33,
 				0x20, 0x28, 0x33, 0x31, 0x4a, 0x53, 0x49, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x44, 0x4d, 0x58, 0x43,
@@ -554,7 +538,7 @@ func TestArtPollReplyPacketUnmarshal(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var a ArtPollReplyPacket
+			a := &ArtPollReplyPacket{}
 			err := a.UnmarshalBinary(tt.b[:])
 
 			if want, got := tt.err, err; want != got {

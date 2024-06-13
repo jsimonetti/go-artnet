@@ -1,6 +1,9 @@
 package packet
 
 import (
+	"bytes"
+	"encoding"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
@@ -16,7 +19,7 @@ func Unmarshal(b []byte) (p ArtNetPacket, err error) {
 
 	notImplErr := fmt.Errorf("unimplemented opcode %#v found", h.OpCode)
 
-	switch h.OpCode {
+	switch h.GetOpCode() {
 	case code.OpPoll:
 		p = &ArtPollPacket{}
 	case code.OpPollReply:
@@ -74,4 +77,49 @@ func Unmarshal(b []byte) (p ArtNetPacket, err error) {
 
 	err = p.UnmarshalBinary(b)
 	return
+}
+
+// ArtNetPacket is the interface used for passing around different kinds of ArtNet packets.
+type ArtNetPacket interface {
+	GetOpCode() code.OpCode
+
+	encoding.BinaryMarshaler
+
+	encoding.BinaryUnmarshaler
+}
+
+func marshalPacket(p ArtNetPacket) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// checkPadAndUnmarshalPacket returns an error if len(b) is less than min, more than max
+// and ensure len(b) is max by padding with bytes
+func checkPadAndUnmarshalPacket(p ArtNetPacket, b []byte, min, max int) error {
+	if len(b) < min {
+		return errInvalidPacketMin
+	}
+
+	if len(b) > max {
+		return errInvalidPacketMax
+	}
+
+	padding := make([]byte, max-len(b))
+	b = append(b, padding...)
+	return unmarshalPacket(p, b)
+
+}
+
+// unmarshalPacket fills p with from b (BigEndian)
+// some packets will need to flip some values around after.
+func unmarshalPacket(p ArtNetPacket, b []byte) error {
+	buf := bytes.NewReader(b)
+	return binary.Read(buf, binary.BigEndian, p)
+}
+
+func swapUint16(x uint16) uint16 {
+	return x>>8 + x<<8
 }

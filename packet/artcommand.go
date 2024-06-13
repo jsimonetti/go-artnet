@@ -16,7 +16,7 @@ var _ ArtNetPacket = &ArtCommandPacket{}
 // the maximum of 512 and null pad unused entries.
 // The command text may contain multiple commands and adheres to the following syntax:
 //
-//   Command=Data&
+//	Command=Data&
 //
 // The ampersand is a break between commands. Also note that the text is capitalised for
 // readability; it is case insensitive. Thus far, two commands are defined by Art-Net. It is
@@ -24,20 +24,24 @@ var _ ArtNetPacket = &ArtCommandPacket{}
 // which have industry wide relevance. These commands shall be transmitted with EstaMan = 0xFFFF.
 //
 // SwoutText - This command is used to re-programme the label associated with the
-//             ArtPollReply->Swout fields. Syntax: "SwoutText=Playback&"
+//
+//	ArtPollReply->Swout fields. Syntax: "SwoutText=Playback&"
+//
 // SwinText  - This command is used to re-programme the label associated with the
-//             ArtPollReply->Swin fields. Syntax: "SwinText=Record&"
+//
+//	ArtPollReply->Swin fields. Syntax: "SwinText=Record&"
 //
 // Packet Strategy:
-//  Controller -  Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
-//  Node -        Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
-//  MediaServer - Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
+//
+//	Controller -  Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
+//	Node -        Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
+//	MediaServer - Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
 type ArtCommandPacket struct {
 	// Inherit the Header header
 	Header
@@ -54,7 +58,10 @@ type ArtCommandPacket struct {
 
 // NewArtCommandPacket returns an ArtNetPacket with the correct OpCode
 func NewArtCommandPacket() *ArtCommandPacket {
-	return &ArtCommandPacket{}
+	return &ArtCommandPacket{
+		Header:           NewHeader(code.OpCommand),
+		ESTAmanufacturer: [2]byte{0xff, 0xff},
+	}
 }
 
 // MarshalBinary marshals an ArtCommandPacket into a byte slice.
@@ -64,25 +71,10 @@ func (p *ArtCommandPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtCommandPacket.
 func (p *ArtCommandPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtCommandPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpCommand {
-		return errInvalidOpCode
-	}
-	if p.ESTAmanufacturer != [2]byte{0xff, 0xff} {
-		return errInvalidPacket
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtCommandPacket) finish() {
-	p.Header.finish()
-	p.ESTAmanufacturer = [2]byte{0xff, 0xff}
+	return p.Header.validate(code.OpCommand)
 }

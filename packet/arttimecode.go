@@ -15,15 +15,16 @@ var _ ArtNetPacket = &ArtTimeCodePacket{}
 // broadcast the packet to the network.
 //
 // Packet Strategy:
-//  Controller -  Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
-//  Node -        Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
-//  MediaServer - Receive:            Application Specific
-//                Unicast Transmit:   Application Specific
-//                Broadcast Transmit: Application Specific
+//
+//	Controller -  Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
+//	Node -        Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
+//	MediaServer - Receive:            Application Specific
+//	              Unicast Transmit:   Application Specific
+//	              Broadcast Transmit: Application Specific
 type ArtTimeCodePacket struct {
 	// Inherit the Header header
 	Header
@@ -49,7 +50,9 @@ type ArtTimeCodePacket struct {
 
 // NewArtTimeCodePacket returns an ArtNetPacket with the correct OpCode
 func NewArtTimeCodePacket() *ArtTimeCodePacket {
-	return &ArtTimeCodePacket{}
+	return &ArtTimeCodePacket{
+		Header: NewHeader(code.OpTimeCode),
+	}
 }
 
 // MarshalBinary marshals an ArtTimeCodePacket into a byte slice.
@@ -59,21 +62,10 @@ func (p *ArtTimeCodePacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtTimeCodePacket.
 func (p *ArtTimeCodePacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtTimeCodePacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpTimeCode {
-		return errInvalidOpCode
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtTimeCodePacket) finish() {
-	p.Header.finish()
+	return p.Header.validate(code.OpTimeCode)
 }

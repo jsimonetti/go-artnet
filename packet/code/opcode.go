@@ -11,6 +11,18 @@ func ValidOp(o OpCode) bool {
 	return ok
 }
 
+// GetOpCode returns the OpCode, with its bytes swapped
+// Its provided as a method so Packets can inline OpCode
+// and then provide GetOpCode() as their own method.
+// This provides a way around the big-endian format of the two bytes in packets.
+func (c OpCode) GetOpCode() OpCode {
+	return OpCode(swapUint16(uint16(c)))
+}
+
+func swapUint16(x uint16) uint16 {
+	return x>>8 + x<<8
+}
+
 const (
 	// OpPoll This is an ArtPoll packet, no other data is contained in this UDP packet.
 	OpPoll OpCode = 0x2000

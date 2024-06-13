@@ -14,15 +14,16 @@ var _ ArtNetPacket = &ArtIPProgReplyPacket{}
 // sender.
 //
 // Packet Strategy:
-//  Controller -  Receive:            No Action
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Not Allowed
-//  Node -        Receive:            No Action
-//                Unicast Transmit:   Transmits to specific Controller IP address
-//                Broadcast Transmit: Not Allowed
-//  MediaServer - Receive:            No Action
-//                Unicast Transmit:   Transmits to specific Controller IP address
-//                Broadcast Transmit: Not Allowed
+//
+//	Controller -  Receive:            No Action
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Not Allowed
+//	Node -        Receive:            No Action
+//	              Unicast Transmit:   Transmits to specific Controller IP address
+//	              Broadcast Transmit: Not Allowed
+//	MediaServer - Receive:            No Action
+//	              Unicast Transmit:   Transmits to specific Controller IP address
+//	              Broadcast Transmit: Not Allowed
 type ArtIPProgReplyPacket struct {
 	// Inherit the Header header
 	Header
@@ -48,7 +49,9 @@ type ArtIPProgReplyPacket struct {
 
 // NewArtIPProgReplyPacket returns an ArtNetPacket with the correct OpCode
 func NewArtIPProgReplyPacket() *ArtIPProgReplyPacket {
-	return &ArtIPProgReplyPacket{}
+	return &ArtIPProgReplyPacket{
+		Header: NewHeader(code.OpIPProgReply),
+	}
 }
 
 // MarshalBinary marshals an ArtIPProgReplyPacket into a byte slice.
@@ -58,21 +61,10 @@ func (p *ArtIPProgReplyPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtIPProgReplyPacket.
 func (p *ArtIPProgReplyPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtIPProgReplyPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpIPProgReply {
-		return errInvalidOpCode
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtIPProgReplyPacket) finish() {
-	p.Header.finish()
+	return p.Header.validate(code.OpIPProgReply)
 }

@@ -13,15 +13,16 @@ var _ ArtNetPacket = &ArtNzsPacket{}
 // Controller to Node
 //
 // Packet Strategy:
-//  Controller -  Receive:            Application Specific
-//                Unicast Transmit:   Yes
-//                Broadcast Transmit: No
-//  Node -        Receive:            Application Specific
-//                Unicast Transmit:   Yes
-//                Broadcast Transmit: No
-//  MediaServer - Receive:            Application Specific
-//                Unicast Transmit:   Yes
-//                Broadcast Transmit: No
+//
+//	Controller -  Receive:            Application Specific
+//	              Unicast Transmit:   Yes
+//	              Broadcast Transmit: No
+//	Node -        Receive:            Application Specific
+//	              Unicast Transmit:   Yes
+//	              Broadcast Transmit: No
+//	MediaServer - Receive:            Application Specific
+//	              Unicast Transmit:   Yes
+//	              Broadcast Transmit: No
 type ArtNzsPacket struct {
 	// Inherit the Header header
 	Header
@@ -52,7 +53,9 @@ type ArtNzsPacket struct {
 
 // NewArtNzsPacket returns an ArtNetPacket with the correct OpCode
 func NewArtNzsPacket() *ArtNzsPacket {
-	return &ArtNzsPacket{}
+	return &ArtNzsPacket{
+		Header: NewHeader(code.OpNzs),
+	}
 }
 
 // MarshalBinary marshals an ArtNzsPacket into a byte slice.
@@ -62,21 +65,10 @@ func (p *ArtNzsPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtNzsPacket.
 func (p *ArtNzsPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtNzsPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpNzs {
-		return errInvalidOpCode
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtNzsPacket) finish() {
-	p.Header.finish()
+	return p.Header.validate(code.OpNzs)
 }

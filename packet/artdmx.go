@@ -2,6 +2,7 @@ package packet
 
 import (
 	"github.com/jsimonetti/go-artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/types"
 )
 
 var _ ArtNetPacket = &ArtDMXPacket{}
@@ -26,17 +27,18 @@ var _ ArtNetPacket = &ArtDMXPacket{}
 // A DMX input that fails will not continue to transmit ArtDmx data.
 //
 // Packet Strategy:
-//  Controller -  Receive:            Application Specific
-//                Unicast Transmit:   Yes
-//                Broadcast Transmit: No
-//  Node -        Receive:            Application Specific
-//                Unicast Transmit:   Yes
-//                Broadcast Transmit: No
-//  MediaServer - Receive:            Application Specific
-//                Unicast Transmit:   Yes
-//                Broadcast Transmit: No
+//
+//	Controller -  Receive:            Application Specific
+//	              Unicast Transmit:   Yes
+//	              Broadcast Transmit: No
+//	Node -        Receive:            Application Specific
+//	              Unicast Transmit:   Yes
+//	              Broadcast Transmit: No
+//	MediaServer - Receive:            Application Specific
+//	              Unicast Transmit:   Yes
+//	              Broadcast Transmit: No
 type ArtDMXPacket struct {
-	// Inherit the Header header
+	// Inherit the Header
 	Header
 
 	// Sequence number is used to ensure that ArtDmx packets are used in the correct order.
@@ -62,12 +64,27 @@ type ArtDMXPacket struct {
 	Length uint16
 
 	// Data is a string of DMX512 lighting data
-	Data [512]byte
+	Data types.DMXData
 }
 
+const (
+	minimumArtDMXPacketSize int = 20
+	maximumArtDMXPacketSize int = minimumArtDMXPacketSize + 510
+)
+
 // NewArtDMXPacket returns an ArtNetPacket with the correct OpCode
-func NewArtDMXPacket() *ArtDMXPacket {
-	return &ArtDMXPacket{}
+func NewArtDMXPacket(a types.Address, data types.DMXData, sequence uint8) *ArtDMXPacket {
+	p := &ArtDMXPacket{
+		Header:   NewHeader(code.OpDMX),
+		Net:      a.Net,
+		SubUni:   a.SubUni,
+		Length:   512,
+		Sequence: sequence,
+	}
+
+	copy(p.Data[:], data[:])
+
+	return p
 }
 
 // MarshalBinary marshals an ArtDMXPacket into a byte slice.
@@ -77,46 +94,25 @@ func (p *ArtDMXPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtDMXPacket.
 func (p *ArtDMXPacket) UnmarshalBinary(b []byte) error {
-	if len(b) < 18 {
-		return errInvalidPacket
+	if len(b)%2 != 0 {
+		return errInvalidPacketBoundary
 	}
 
-	if err := p.Header.unmarshal(b[:12]); err != nil {
+	err := checkPadAndUnmarshalPacket(p, b, minimumArtDMXPacketSize, maximumArtDMXPacketSize)
+	if err != nil {
 		return err
 	}
 
-	p.Sequence = b[12]
-	p.Physical = b[13]
-	p.SubUni = b[14]
-	p.Net = b[15]
-
-	// Length is high byte first
-	p.Length = uint16(b[16])*uint16(256) + uint16(b[17])
-	l := int(p.Length)
-
-	// Given length must not exceed the slice length and must be an even number between 2 and 512.
-	if len(b) < l+18 || l < 2 || l > 512 || l%2 != 0 {
-		return errInvalidPacket
-	}
-	copy(p.Data[0:l], b[18:18+l])
-
-	return nil
+	return p.Header.validate(code.OpDMX)
 }
 
-// validate is used to validate the Packet.
-func (p *ArtDMXPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
-		return err
-	}
-	if p.OpCode != code.OpDMX {
-		return errInvalidOpCode
-	}
-	return nil
+func (p ArtDMXPacket) GetLength() uint16 {
+	return swapUint16(p.Length)
 }
 
-// finish is used to finish the Packet for sending.
-func (p *ArtDMXPacket) finish() {
-	p.Length = 512
-	p.OpCode = code.OpDMX
-	p.Header.finish()
+func (p ArtDMXPacket) GetAddress() types.Address {
+	return types.Address{
+		Net:    p.Net,
+		SubUni: p.SubUni,
+	}
 }

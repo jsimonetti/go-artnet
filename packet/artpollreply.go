@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/types"
 )
 
 var _ ArtNetPacket = &ArtPollReplyPacket{}
@@ -19,14 +20,8 @@ var _ ArtNetPacket = &ArtPollReplyPacket{}
 //	              Unicast Transmit:   Not Allowed.
 //	              Broadcast Transmit: Directed Broadcasts this packet in response to an ArtPoll.
 type ArtPollReplyPacket struct {
-	// ID is an Array of 8 characters, the final character is a null termination.
-	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
-	// ArtPollReply is the only packet not containing version, so do this here
-	ID [8]byte
-
-	// OpCode defines the class of data following within this UDP packet.
-	// Transmitted low byte first.
-	OpCode code.OpCode
+	// Inherit the HeaderWithoutVersion
+	HeaderWithoutVersion
 
 	// IPAddress is the Node’s IPv4 address. When binding is implemented, bound nodes may
 	// share the root node’s IP Address and the BindIndex is used to differentiate the nodes.
@@ -131,7 +126,7 @@ type ArtPollReplyPacket struct {
 
 	// BindIndex represents the order of bound devices. A lower number means closer to root device.
 	// A value of 1 means root device.
-	BindIndex uint8
+	BindIndex types.BindIndex
 
 	// Status2 indicates Product capabilities
 	Status2 code.Status2
@@ -163,47 +158,35 @@ const (
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
 func NewArtPollReplyPacket() *ArtPollReplyPacket {
-	return &ArtPollReplyPacket{}
-}
-
-// GetOpCode returns the OpCode parsed by validate method
-func (p *ArtPollReplyPacket) GetOpCode() code.OpCode {
-	return p.OpCode
+	return &ArtPollReplyPacket{
+		HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+		Port:                 ArtNetPort,
+	}
 }
 
 // MarshalBinary marshals an ArtPollReplyPacket into a byte slice.
 func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
+	p.Port = swapUint16(p.Port)
 	return marshalPacket(p)
 }
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
 func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
-	if len(b) < minimumArtPollReplyPacketSize {
-		return fmt.Errorf("packet was below minimum size: %d, got: %d", minimumArtPollReplyPacketSize, len(b))
+	err := checkPadAndUnmarshalPacket(p, b, minimumArtPollReplyPacketSize, maximumArtPollReplyPacketSize)
+	if err != nil {
+		return err
 	}
 
-	if len(b) < maximumArtPollReplyPacketSize {
-		padding := make([]byte, maximumArtPollReplyPacketSize-len(b))
-		b = append(b, padding...)
+	if err := p.HeaderWithoutVersion.validate(code.OpPollReply); err != nil {
+		return err
 	}
-	return unmarshalPacket(p, b)
-}
 
-// validate is used to validate the Packet.
-func (p *ArtPollReplyPacket) validate() error {
-	// ArtPollReply is a packer not using the standard header, so we need to do
-	// some extra things here that are normally done in the header validate
-
-	// swap endianness
-	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
-	if p.OpCode != code.OpPollReply {
-		return errInvalidOpCode
-	}
 	p.Port = swapUint16(p.Port)
 
 	// It appears not all software sends the port low byte first
 	// so make an extra check here
 	if p.Port != ArtNetPort {
+		// since port could be swapped, swap representation
 		p.Port = swapUint16(p.Port)
 		if p.Port != ArtNetPort {
 			return fmt.Errorf("invalid port: want: %d, got: %d", ArtNetPort, p.Port)
@@ -213,14 +196,6 @@ func (p *ArtPollReplyPacket) validate() error {
 	if !code.ValidStyle(p.Style) {
 		return errInvalidStyleCode
 	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtPollReplyPacket) finish() {
-	// ArtPollReply doesn't embed the header struct, so the header.finish method won't set the header fields. To get a
-	// working packet we do it here "manually"
-	p.ID = ArtNet
-	p.OpCode = code.OpCode(swapUint16(uint16(code.OpPollReply)))
-	p.Port = swapUint16(p.Port)
+	return nil
 }

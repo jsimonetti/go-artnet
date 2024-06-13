@@ -1,53 +1,40 @@
 package artnet
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/jsimonetti/go-artnet/packet"
 	"github.com/jsimonetti/go-artnet/packet/code"
 )
 
-// NodeCallbackFn gets called when a new packet has been received and needs to be processed
-type NodeCallbackFn func(p packet.ArtNetPacket)
-
 // Node is the information known about a node
 type Node struct {
 	// Config holds the configuration of this node
 	Config NodeConfig
 
-	broadcastAddr net.UDPAddr
-
-	// conn is the UDP connection this node will listen on
-	conn      *net.UDPConn
-	localAddr net.UDPAddr
-	sendCh    chan netPayload
-	recvCh    chan netPayload
-
-	// shutdownCh will be closed on shutdown of the node
-	shutdownCh   chan struct{}
-	shutdown     bool
-	shutdownErr  error
-	shutdownLock sync.Mutex
-
-	// pollCh will receive ArtPoll packets
-	pollCh chan packet.ArtPollPacket
-	// pollCh will send ArtPollReply packets
-	pollReplyCh chan packet.ArtPollReplyPacket
-
 	log Logger
 
-	callbacks map[code.OpCode]NodeCallbackFn
+	// conn is the UDP connection this node will listen on
+	conn          *net.UDPConn
+	localAddr     net.UDPAddr
+	broadcastAddr net.UDPAddr
+
+	// sendCh is where payloads are passed to be sent by sendLoop
+	sendCh chan netPayload
+	// pollCh is how pollPackets are passed to the pollReplyLoop
+	pollCh chan packet.ArtPollPacket
+
+	packetHandlers map[code.OpCode]PacketHandler
 }
 
 // netPayload contains bytes read from the network and/or an error
 type netPayload struct {
 	address net.UDPAddr
-	err     error
-	data    []byte
+	packet  packet.ArtNetPacket
 }
 
 // NewNode return a Node
@@ -56,269 +43,206 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger, opts ...N
 		Config: NodeConfig{
 			Name: name,
 			Type: style,
+			IP:   ip,
+		},
+		log: log.With(Fields{"type": "Node"}),
+
+		conn: nil,
+		localAddr: net.UDPAddr{
+			IP:   ip,
+			Port: packet.ArtNetPort,
+			Zone: "",
 		},
 		broadcastAddr: defaultBroadcastAddr,
-		conn:          nil,
-		shutdown:      true,
-		log:           log.With(Fields{"type": "Node"}),
-	}
 
-	for _, opt := range opts {
-		n.SetOption(opt)
-	}
+		sendCh: make(chan netPayload, 10),
+		pollCh: make(chan packet.ArtPollPacket, 10),
 
-	// initialize required node callbacks
-	n.callbacks = map[code.OpCode]NodeCallbackFn{
-		code.OpPoll:      n.handlePacketPoll,
-		code.OpPollReply: n.handlePacketPollReply,
+		packetHandlers: make(map[code.OpCode]PacketHandler),
 	}
 
 	if len(ip) < 1 {
 		// TODO: generate an IP according to spec
 		//ip = GenerateIP()
 	}
-	n.Config.IP = ip
-	n.localAddr = net.UDPAddr{
-		IP:   ip,
-		Port: packet.ArtNetPort,
-		Zone: "",
+
+	for _, opt := range opts {
+		n.SetOption(opt)
 	}
+
+	handlePacketPoll := func(p packet.ArtNetPacket) {
+		poll, ok := p.(*packet.ArtPollPacket)
+		if !ok {
+			n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
+			return
+		}
+
+		n.pollCh <- *poll
+	}
+	n.packetHandlers[code.OpPoll] = handlePacketPoll
 
 	return n
 }
 
-// Stop will stop all running routines and close the network connection
-func (n *Node) Stop() {
-	n.shutdownLock.Lock()
-	n.shutdown = true
-	n.shutdownLock.Unlock()
-	close(n.shutdownCh)
-	if n.conn != nil {
-		if err := n.conn.Close(); err != nil {
-			n.log.Printf("failed to close read socket: %v")
-		}
-	}
-}
-
-func (n *Node) isShutdown() bool {
-	n.shutdownLock.Lock()
-	defer n.shutdownLock.Unlock()
-	return n.shutdown
-}
-
-// Start will start the controller
-func (n *Node) Start() error {
+// Start will start the controller.
+// Closing ctx will end all routines and close connection
+func (n *Node) Start(ctx context.Context) error {
 	if err := n.Config.validate(); err != nil {
 		return err
 	}
-	n.log.With(Fields{"ip": n.Config.IP.String(), "type": n.Config.Type.String()}).Debug("node started")
-
-	n.sendCh = make(chan netPayload, 10)
-	n.recvCh = make(chan netPayload, 10)
-	n.pollCh = make(chan packet.ArtPollPacket, 10)
-	n.pollReplyCh = make(chan packet.ArtPollReplyPacket, 10)
-	n.shutdownCh = make(chan struct{})
-	n.shutdown = false
 
 	c, err := net.ListenPacket("udp4", fmt.Sprintf(":%d", packet.ArtNetPort))
 	if err != nil {
-		n.shutdownErr = fmt.Errorf("error net.ListenPacket: %s", err)
 		n.log.With(Fields{"error": err}).Error("error net.ListenPacket")
 		return err
 	}
 	n.conn = c.(*net.UDPConn)
 
-	go n.pollReplyLoop()
-	go n.recvLoop()
-	go n.sendLoop()
+	go n.pollReplyLoop(ctx)
+	go n.recvLoop(ctx)
+	go n.sendLoop(ctx)
+
+	n.log.With(Fields{"ip": n.Config.IP.String(), "type": n.Config.Type.String()}).Debug("node started")
 
 	return nil
 }
 
 // pollReplyLoop loops to reply to ArtPoll packets
 // when a controller asks for continuous updates, we do that using a ticker
-func (n *Node) pollReplyLoop() {
-	var timer time.Ticker
-
-	// create an ArtPollReply packet to send out in response to an ArtPoll packet
-	p := ArtPollReplyFromConfig(n.Config)
-	me, err := p.MarshalBinary()
-	if err != nil {
-		n.log.With(Fields{"err": err}).Error("error creating ArtPollReply packet for self")
-		return
-	}
+func (n *Node) pollReplyLoop(ctx context.Context) {
+	var ticker time.Ticker
 
 	// loop until shutdown
 	for {
 		select {
-		case <-timer.C:
+		case <-ctx.Done():
+			return
+
+		case <-ticker.C:
 			// if we should regularly send replies (can be requested by the controller)
 			// we send it here
 
 		case <-n.pollCh:
 			// reply with pollReply
-			n.log.With(nil).Debug("sending ArtPollReply")
+			// n.log.With(nil).Debug("sending ArtPollReply")
 
 			n.sendCh <- netPayload{
 				address: n.broadcastAddr,
-				data:    me,
+				packet:  n.Config.buildArtPollReply(),
 			}
 
 			// TODO: if we are asked to send changes regularly, set the Ticker here
 
-		case <-n.shutdownCh:
-			return
 		}
 	}
 }
 
 // sendLoop is used to send packets to the network
-func (n *Node) sendLoop() {
-	// loop until shutdown
+func (n *Node) sendLoop(ctx context.Context) {
+	// loop until ctx ends
 	for {
 		select {
-		case <-n.shutdownCh:
+		case <-ctx.Done():
+			err := n.conn.Close()
+			if err != nil {
+				n.log.With(Fields{"error": err}).Errorf("error closing conn")
+			}
 			return
 
 		case payload := <-n.sendCh:
-			if n.isShutdown() {
-				return
-			}
 
-			num, err := n.conn.WriteToUDP(payload.data, &payload.address)
+			// opCode := payload.packet.GetOpCode()
+			// address := types.Address{}
+
+			// if dmxPacket, ok := payload.packet.(*packet.ArtDMXPacket); ok {
+			// 	address = dmxPacket.GetAddress()
+			// }
+
+			// create an ArtPoll packet to send out periodically
+			b, err := payload.packet.MarshalBinary()
 			if err != nil {
-				n.log.With(Fields{"error": err}).Debugf("error writing packet")
+				n.log.With(Fields{"error": err, "dst": payload.address.String()}).Errorf("error marshalling packet")
 				continue
 			}
-			n.log.With(Fields{"dst": payload.address.String(), "bytes": num}).Debugf("packet sent")
+			_, err = n.conn.WriteToUDP(b, &payload.address)
+			if err != nil {
+				n.log.With(Fields{"error": err, "dst": payload.address.String()}).Errorf("error writing packet")
+				continue
+			}
+			// n.log.With(Fields{
+			// 	"dst":     payload.address.String(),
+			// 	"bytes":   num,
+			// 	"opCode":  opCode,
+			// 	"address": address,
+			// }).Debugf("packet sent")
 
 		}
 	}
 }
 
-// recvLoop is used to receive packets from the network
-// it starts a goroutine for dumping the msgs onto a channel,
-// the payload from that channel is then fed into a handler
+// sendPacket will build and push a payload onto the sendCh
+func (n *Node) send(a net.UDPAddr, p packet.ArtNetPacket) {
+
+	// n.log.With(Fields{"dst": a.String(), "opCode": p.GetOpCode()}).Debugf("packet sending")
+
+	n.sendCh <- netPayload{
+		address: a,
+		packet:  p,
+	}
+}
+
+// recvLoop is used to receive packets from the network.
 // due to the nature of broadcasting, we see our own sent
 // packets to, but we ignore them
-func (n *Node) recvLoop() {
-	// start a routine that will read data from n.conn
-	// and (if not shutdown), send to the recvCh
-	go func() {
-		b := make([]byte, 4096)
-		for {
-			num, from, err := n.conn.ReadFromUDP(b)
-			if n.isShutdown() {
+func (n *Node) recvLoop(ctx context.Context) {
+	b := make([]byte, 4096)
+	// loop until ctx ends
+	for {
+		select {
+		case <-ctx.Done():
+			// no need to close n.conn, sendLoop handles that
+			return
+		default:
+		}
+
+		num, from, err := n.conn.ReadFromUDP(b)
+
+		if n.localAddr.IP.Equal(from.IP) {
+			// this was sent by me, so we ignore it
+			//n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("ignoring received packet from self")
+			continue
+		}
+
+		if err != nil {
+			if err == io.EOF {
 				return
 			}
 
-			if n.localAddr.IP.Equal(from.IP) {
-				// this was sent by me, so we ignore it
-				//n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("ignoring received packet from self")
-				continue
-			}
-
-			if err != nil {
-				if err == io.EOF {
-					return
-				}
-
-				n.log.With(Fields{"src": from.String(), "bytes": num}).Errorf("failed to read from socket: %v", err)
-				continue
-			}
-
-			n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("received packet")
-			payload := netPayload{
-				address: *from,
-				err:     err,
-				data:    make([]byte, num),
-			}
-			copy(payload.data, b)
-			n.recvCh <- payload
+			n.log.With(Fields{"src": from.String(), "bytes": num}).Errorf("failed to read from socket: %v", err)
+			continue
 		}
-	}()
 
-	// loop until shutdown
-	for {
-		select {
-		case payload := <-n.recvCh:
-			p, err := packet.Unmarshal(payload.data)
-			if err != nil {
-				n.log.With(Fields{
-					"src":  payload.address.IP.String(),
-					"data": fmt.Sprintf("%v", payload.data),
-				}).Warnf("failed to parse packet: %v", err)
-				continue
-			}
+		// n.log.With(Fields{"src": from.String(), "bytes": num}).Debugf("received packet")
 
-			// at this point we assume that p contains an
-			// unmarshalled packet that must have a valid
-			// opcode which we can now extract and handle
-			// the packet by calling the corresponding
-			// callback
-			go n.handlePacket(p)
-
-		case <-n.shutdownCh:
-			return
+		p, err := packet.Unmarshal(b[:num])
+		if err != nil {
+			n.log.With(Fields{"data": fmt.Sprintf("%v", b)}).Warnf("failed to parse packet: %v", err)
+			continue
 		}
+		go n.handlePacket(p)
 	}
 }
 
 // handlePacket contains the logic for dealing with incoming packets
 func (n *Node) handlePacket(p packet.ArtNetPacket) {
-	callback, ok := n.callbacks[p.GetOpCode()]
+	handler, ok := n.packetHandlers[p.GetOpCode()]
 	if !ok {
-		n.log.With(Fields{"packet": p}).Debugf("ignoring unhandled packet")
+		n.log.With(Fields{"packet": p, "opCode": p.GetOpCode()}).Debugf("ignoring unhandled packet")
 		return
 	}
 
-	callback(p)
+	go handler(p)
 }
 
-func (n *Node) handlePacketPoll(p packet.ArtNetPacket) {
-	poll, ok := p.(*packet.ArtPollPacket)
-	if !ok {
-		n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
-		return
-	}
-
-	n.pollCh <- *poll
-}
-
-func (n *Node) handlePacketPollReply(p packet.ArtNetPacket) {
-	// only handle these packets if we are a controller
-	if n.Config.Type == code.StController {
-		pollReply, ok := p.(*packet.ArtPollReplyPacket)
-		if !ok {
-			n.log.With(Fields{"packet": p}).Debugf("unknown packet type")
-			return
-		}
-
-		n.pollReplyCh <- *pollReply
-	}
-}
-
-// RegisterCallback stores the given callback which will be called when a
-// packet with the given opcode arrives. This registration function can
-// only register callbacks before the node has been started. Calling this
-// function multiple times replaces every previous callback.
-func (n *Node) RegisterCallback(opcode code.OpCode, callback NodeCallbackFn) {
-	if !n.isShutdown() {
-		n.log.With(Fields{"opcode": opcode}).Debugf("ignoring callback registration: node has already been started")
-		return
-	}
-
-	n.callbacks[opcode] = callback
-}
-
-// DeregisterCallback deletes a callback stored for the given opcode. This
-// deregistration function can only deregister callbacks before the node
-// has been started.
-func (n *Node) DeregisterCallback(opcode code.OpCode) {
-	if !n.isShutdown() {
-		n.log.With(Fields{"opcode": opcode}).Debugf("ignoring callback registration: node has already been started")
-		return
-	}
-
-	delete(n.callbacks, opcode)
-}
+// PacketHandler gets called when a new packet has been received and needs to be processed
+type PacketHandler func(p packet.ArtNetPacket)

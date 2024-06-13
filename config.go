@@ -6,34 +6,19 @@ import (
 
 	"github.com/jsimonetti/go-artnet/packet"
 	"github.com/jsimonetti/go-artnet/packet/code"
+	"github.com/jsimonetti/go-artnet/types"
 )
-
-// Address contains a universe address
-type Address struct {
-	Net    uint8 // 0-128
-	SubUni uint8
-}
-
-// String returns a string representation of Address
-func (a Address) String() string {
-	return fmt.Sprintf("%d:%d.%d", a.Net, a.SubUni>>4, a.SubUni&0x0f)
-}
-
-// Integer returns the integer representation of Address
-func (a Address) Integer() int {
-	return int(uint16(a.Net)<<8 | uint16(a.SubUni))
-}
 
 // InputPort contains information for an input port
 type InputPort struct {
-	Address Address
+	Address types.Address
 	Type    code.PortType
 	Status  code.GoodInput
 }
 
 // OutputPort contains information for an input port
 type OutputPort struct {
-	Address Address
+	Address types.Address
 	Type    code.PortType
 	Status  code.GoodOutput
 }
@@ -51,7 +36,7 @@ type NodeConfig struct {
 	Ethernet  net.HardwareAddr
 	IP        net.IP
 	BindIP    net.IP
-	BindIndex uint8
+	BindIndex types.BindIndex
 	Port      uint16
 
 	Report  code.NodeReport
@@ -59,30 +44,28 @@ type NodeConfig struct {
 	Status2 code.Status2
 	Status3 code.Status3
 
-	BaseAddress Address
+	BaseAddress types.Address
 	InputPorts  []InputPort
 	OutputPorts []OutputPort
 }
 
-// ArtPollReplyFromConfig will return a ArtPollReplyPacket from the NodeConfig
+// buildArtPollReply will return a ArtPollReplyPacket from the NodeConfig
 // TODO: make this a more complete packet by adding the other NodeConfig fields
-func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
-	p := &packet.ArtPollReplyPacket{
-		OpCode:      code.OpPollReply,
-		Port:        packet.ArtNetPort,
-		Oem:         c.OEM,
-		VersionInfo: c.Version,
-		UBEAVersion: c.BiosVersion,
-		Style:       c.Type,
-		BindIndex:   c.BindIndex,
-		Status1:     c.Status1,
-		Status2:     c.Status2,
-		Status3:     c.Status3,
-		NetSwitch:   c.BaseAddress.Net,
-		SubSwitch:   c.BaseAddress.SubUni,
-		NumPorts:    c.NumberOfPorts(),
-		PortTypes:   c.PortTypes(),
-	}
+func (c NodeConfig) buildArtPollReply() *packet.ArtPollReplyPacket {
+	p := packet.NewArtPollReplyPacket()
+
+	p.Oem = c.OEM
+	p.VersionInfo = c.Version
+	p.UBEAVersion = c.BiosVersion
+	p.Style = c.Type
+	p.BindIndex = c.BindIndex
+	p.Status1 = c.Status1
+	p.Status2 = c.Status2
+	p.Status3 = c.Status3
+	p.NetSwitch = c.BaseAddress.Net
+	p.SubSwitch = c.BaseAddress.SubUni
+	p.NumPorts = c.NumberOfPorts()
+	p.PortTypes = c.PortTypes()
 
 	copy(p.IPAddress[0:4], c.IP.To4())
 	copy(p.ESTAmanufacturer[0:2], c.Manufacturer)
@@ -153,8 +136,8 @@ func (c NodeConfig) validate() error {
 	return nil
 }
 
-// ConfigFromArtPollReply will return a Config from the information in the ArtPollReplyPacket
-func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
+// newNodeConfigFrom will return a Config from the information in the ArtPollReplyPacket
+func newNodeConfigFrom(p *packet.ArtPollReplyPacket) NodeConfig {
 	nodeConfig := NodeConfig{
 		OEM:          p.Oem,
 		Version:      p.VersionInfo,
@@ -172,16 +155,16 @@ func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
 		Status1:      p.Status1,
 		Status2:      p.Status2,
 		Status3:      p.Status3,
-		BaseAddress: Address{
+		BaseAddress: types.Address{
 			Net:    p.NetSwitch,
-			SubUni: p.SubSwitch,
+			SubUni: p.SubSwitch << 4,
 		},
 	}
 
 	for i := 0; i < int(p.NumPorts) && i < 4; i++ {
 		if p.PortTypes[i].Output() {
 			nodeConfig.OutputPorts = append(nodeConfig.OutputPorts, OutputPort{
-				Address: Address{
+				Address: types.Address{
 					Net:    nodeConfig.BaseAddress.Net,
 					SubUni: nodeConfig.BaseAddress.SubUni | p.SwOut[i],
 				},
@@ -191,7 +174,7 @@ func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
 		}
 		if p.PortTypes[i].Input() {
 			nodeConfig.InputPorts = append(nodeConfig.InputPorts, InputPort{
-				Address: Address{
+				Address: types.Address{
 					Net:    nodeConfig.BaseAddress.Net,
 					SubUni: nodeConfig.BaseAddress.SubUni | p.SwIn[i],
 				},

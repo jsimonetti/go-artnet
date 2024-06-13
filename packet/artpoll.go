@@ -26,16 +26,17 @@ var _ ArtNetPacket = &ArtPollPacket{}
 // disconnect.
 //
 // Packet Strategy:
-//  Controller -  Receive:            Send ArtPollReply
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Controller broadcasts this packet to poll all Controllers and
-//                                   Nodes on the network
-//  Node -        Receive:            Send ArtPollReply
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Not Allowed
-//  MediaServer - Receive:            Send ArtPollReply
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Not Allowed
+//
+//	Controller -  Receive:            Send ArtPollReply
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Controller broadcasts this packet to poll all Controllers and
+//	                                 Nodes on the network
+//	Node -        Receive:            Send ArtPollReply
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Not Allowed
+//	MediaServer - Receive:            Send ArtPollReply
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Not Allowed
 type ArtPollPacket struct {
 	// Inherit the Header header
 	Header
@@ -49,7 +50,9 @@ type ArtPollPacket struct {
 
 // NewArtPollPacket returns an ArtNetPacket with the correct OpCode
 func NewArtPollPacket() *ArtPollPacket {
-	return &ArtPollPacket{}
+	return &ArtPollPacket{
+		Header: NewHeader(code.OpPoll),
+	}
 }
 
 // MarshalBinary marshals an ArtPollPacket into a byte slice.
@@ -59,22 +62,10 @@ func (p *ArtPollPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollPacket.
 func (p *ArtPollPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtPollPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpPoll {
-		return errInvalidOpCode
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtPollPacket) finish() {
-	p.OpCode = code.OpPoll
-	p.Header.finish()
+	return p.Header.validate(code.OpPoll)
 }

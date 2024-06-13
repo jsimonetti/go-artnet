@@ -15,16 +15,17 @@ var _ ArtNetPacket = &ArtSyncPacket{}
 // ArtDmx packets to the nodes’ outputs at the same time.
 //
 // Packet Strategy:
-//  Controller -  Receive:            No Action
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Controller broadcasts this packet to synchronously
-//                                    transfer previous ArtDmx packets to Node’s output
-//  Node -        Receive:            Transfer previous ArtDmx packets to output
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Not Allowed
-//  MediaServer - Receive:            Transfer previous ArtDmx packets to output
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Not Allowed
+//
+//	Controller -  Receive:            No Action
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Controller broadcasts this packet to synchronously
+//	                                  transfer previous ArtDmx packets to Node’s output
+//	Node -        Receive:            Transfer previous ArtDmx packets to output
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Not Allowed
+//	MediaServer - Receive:            Transfer previous ArtDmx packets to output
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Not Allowed
 type ArtSyncPacket struct {
 	// Inherit the Header header
 	Header
@@ -35,7 +36,9 @@ type ArtSyncPacket struct {
 
 // NewArtSyncPacket returns an ArtNetPacket with the correct OpCode
 func NewArtSyncPacket() *ArtSyncPacket {
-	return &ArtSyncPacket{}
+	return &ArtSyncPacket{
+		Header: NewHeader(code.OpSync),
+	}
 }
 
 // MarshalBinary marshals an ArtSyncPacket into a byte slice.
@@ -45,21 +48,10 @@ func (p *ArtSyncPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtSyncPacket.
 func (p *ArtSyncPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtSyncPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpSync {
-		return errInvalidOpCode
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtSyncPacket) finish() {
-	p.Header.finish()
+	return p.Header.validate(code.OpSync)
 }

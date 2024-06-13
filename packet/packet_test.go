@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
 )
 
 func TestUnmarshal(t *testing.T) {
@@ -17,11 +16,7 @@ func TestUnmarshal(t *testing.T) {
 		{
 			b: []byte{65, 114, 116, 45, 78, 101, 116, 0, 0, 32, 0, 14, 2, 0},
 			pkg: &ArtPollPacket{
-				Header: Header{
-					ID:      ArtNet,
-					Version: version.Bytes(),
-					OpCode:  code.OpPoll,
-				},
+				Header:   NewHeader(code.OpPoll),
 				TalkToMe: new(code.TalkToMe).WithReplyOnChange(true),
 			},
 		},
@@ -37,22 +32,21 @@ func TestUnmarshal(t *testing.T) {
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			},
 			pkg: &ArtPollReplyPacket{
-				ID:               ArtNet,
-				OpCode:           code.OpPollReply,
-				IPAddress:        [4]uint8{2, 0, 0, 20},
-				Port:             ArtNetPort,
-				ESTAmanufacturer: [2]uint8{},
-				ShortName:        [18]uint8{0x62, 0x61, 0x72, 0x61, 0x64, 0x64, 0x75, 0x72},
-				LongName:         [64]uint8{},
-				NodeReport:       code.NodeReport{},
-				PortTypes:        [4]code.PortType{},
-				GoodInput:        [4]code.GoodInput{},
-				GoodOutput:       [4]code.GoodOutput{},
-				SwIn:             [4]uint8{},
-				SwOut:            [4]uint8{},
-				Style:            code.StController,
-				Macaddress:       [6]uint8{},
-				BindIP:           [4]uint8{},
+				HeaderWithoutVersion: NewHeaderWithoutVersion(code.OpPollReply),
+				IPAddress:            [4]uint8{2, 0, 0, 20},
+				Port:                 ArtNetPort,
+				ESTAmanufacturer:     [2]uint8{},
+				ShortName:            [18]uint8{0x62, 0x61, 0x72, 0x61, 0x64, 0x64, 0x75, 0x72},
+				LongName:             [64]uint8{},
+				NodeReport:           code.NodeReport{},
+				PortTypes:            [4]code.PortType{},
+				GoodInput:            [4]code.GoodInput{},
+				GoodOutput:           [4]code.GoodOutput{},
+				SwIn:                 [4]uint8{},
+				SwOut:                [4]uint8{},
+				Style:                code.StController,
+				Macaddress:           [6]uint8{},
+				BindIP:               [4]uint8{},
 			},
 		},
 		{
@@ -76,11 +70,7 @@ func TestUnmarshal(t *testing.T) {
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			},
 			pkg: &ArtDMXPacket{
-				Header: Header{
-					ID:      ArtNet,
-					OpCode:  code.OpDMX,
-					Version: version.Bytes(),
-				},
+				Header:   NewHeader(code.OpDMX),
 				Sequence: 0xb3,
 				Physical: 0x0,
 				SubUni:   0x7,

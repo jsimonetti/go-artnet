@@ -2,13 +2,12 @@ package packet
 
 import (
 	"bytes"
-	"encoding"
 	"encoding/binary"
 	"errors"
 	"fmt"
 
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/version"
+	"github.com/jsimonetti/go-artnet/types"
 )
 
 // Various errors which may occur when attempting to marshal or unmarshal
@@ -16,108 +15,93 @@ import (
 var (
 	errIncorrectHeaderLength = errors.New("header length incorrect")
 	errInvalidPacket         = errors.New("invalid Art-Net packet")
+	errInvalidPacketBoundary = errors.New("invalid Art-Net packet, not aligned on 16 bit boundary")
+	errInvalidPacketMin      = errors.New("invalid Art-Net packet, less than min")
+	errInvalidPacketMax      = errors.New("invalid Art-Net packet, greater than max")
 	errInvalidOpCode         = errors.New("invalid OpCode in packet")
 	errInvalidStyleCode      = errors.New("invalid StyleCode in packet")
 	errNotImplementedOpCode  = errors.New("not implemented OpCode in packet")
 )
 
-// ArtNetPacket is the interface used for passing around different kinds of ArtNet packets.
-type ArtNetPacket interface {
-	encoding.BinaryMarshaler
-	encoding.BinaryUnmarshaler
-	validate() error
-	finish()
-	GetOpCode() code.OpCode
-}
-
-// ArtNet is the fixed string "Art-Net" terminated with a zero
-var ArtNet = [8]byte{0x41, 0x72, 0x74, 0x2d, 0x4e, 0x65, 0x74, 0x00}
-
 // ArtNetPort is the fixed ArtNet port 6454.
 const ArtNetPort = 6454
+
+const version = types.CurrentVersion
+
+var artNet = types.ArtNet
 
 // Header contains the base header for an ArtNet Packet
 type Header struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
 	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
-	ID [8]byte
+	types.ID
 
 	// OpCode defines the class of data following within this UDP packet.
-	// Transmitted low byte first.
-	OpCode code.OpCode
+	// Transmitted low byte first, GetOpCode() addresses this.
+	code.OpCode
 
 	// Version of this packet
-	Version [2]byte
+	// Transmitted low byte first, GetVersion() addresses this.
+	types.Version
 }
 
-// GetOpCode returns the OpCode parsed by validate method
-func (p *Header) GetOpCode() code.OpCode {
-	return p.OpCode
-}
-
-func (p *Header) unmarshal(b []byte) error {
-	if len(b) < 12 {
-		return errIncorrectHeaderLength
+func NewHeader(opcode code.OpCode) Header {
+	return Header{
+		ID:      artNet,
+		OpCode:  code.OpCode(swapUint16(uint16(opcode))),
+		Version: version,
 	}
-	p.ID = [8]byte{b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]}
-
-	// we're reading the opCode as BigEndian because we have to swap it in validate anyways cause validate is called by
-	// unmarshalPacket too @todo make this easier to understand, maybe separate the header check/unmarshal completely
-	p.OpCode = code.OpCode(binary.BigEndian.Uint16([]byte{b[8], b[9]}))
-	if p.OpCode != code.OpPollReply {
-		p.Version = [2]byte{b[10], b[11]}
-	}
-
-	return p.validate()
 }
 
-func (p *Header) validate() error {
-	if p.ID != ArtNet {
+func (p *Header) validate(expectedOpCode code.OpCode) error {
+	if p.ID != types.ArtNet {
 		return errInvalidPacket
 	}
 
-	p.swapOpCode()
+	if p.GetOpCode() != expectedOpCode {
+		return errInvalidOpCode
+	}
 
-	if p.OpCode != code.OpPollReply {
-		// according to the protocol specification the ArtPollReply package is the only one which does NOT send the protocol
-		// version as the third information after the ID and the OpCode but insteads sends the IP (which leads to the condition
-		// to be true when the second IP octet is >= 14)
-		if p.Version[1] < version.Bytes()[1] {
-			return fmt.Errorf("incompatible version. want: =>14, got: %d", p.Version[1])
-		}
+	if p.GetVersion() < version {
+		return fmt.Errorf("incompatible version. want: %d, got: %d", version, p.GetVersion())
 	}
 
 	return nil
 }
 
-// finish is used to finish the Packet for sending.
-func (p *Header) finish() {
-	p.ID = ArtNet
-	p.Version = version.Bytes()
-	p.swapOpCode()
-}
-
-func (p *Header) swapOpCode() {
-	p.OpCode = code.OpCode(swapUint16(uint16(p.OpCode)))
-}
-
-func marshalPacket(p ArtNetPacket) ([]byte, error) {
-	p.finish()
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func unmarshalPacket(p ArtNetPacket, b []byte) error {
+// unmarshal the contents of a byte slice into a Header.
+func (h *Header) unmarshal(b []byte) error {
 	buf := bytes.NewReader(b)
-	if err := binary.Read(buf, binary.BigEndian, p); err != nil {
-		return err
-	}
-	return p.validate()
+	return binary.Read(buf, binary.BigEndian, h)
 }
 
-func swapUint16(x uint16) uint16 {
-	return x>>8 + x<<8
+// HeaderWithoutVersion contains the base header for an ArtNet Packet
+// without the version
+type HeaderWithoutVersion struct {
+	// ID is an Array of 8 characters, the final character is a null termination.
+	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
+	types.ID
+
+	// OpCode defines the class of data following within this UDP packet.
+	// Transmitted low byte first.
+	code.OpCode
+}
+
+func NewHeaderWithoutVersion(opcode code.OpCode) HeaderWithoutVersion {
+	return HeaderWithoutVersion{
+		ID:     types.ArtNet,
+		OpCode: code.OpCode(swapUint16(uint16(opcode))),
+	}
+}
+
+func (p *HeaderWithoutVersion) validate(expectedOpCode code.OpCode) error {
+	if p.ID != types.ArtNet {
+		return errInvalidPacket
+	}
+
+	if p.GetOpCode() != expectedOpCode {
+		return errInvalidOpCode
+	}
+
+	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -31,7 +32,7 @@ func main() {
 
 	log := artnet.NewDefaultLogger()
 	n := artnet.NewNode("node-1", code.StNode, ip, log)
-	n.Start()
+	n.Start(context.Background())
 
 	for {
 		time.Sleep(time.Second)

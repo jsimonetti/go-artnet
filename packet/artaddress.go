@@ -16,15 +16,16 @@ var _ ArtNetPacket = &ArtAddressPacket{}
 // Fields 5 to 13 contain the data that will be programmed into the node
 //
 // Packet Strategy:
-//  Controller -  Receive:            No Action
-//                Unicast Transmit:   Controller transmits to a specific node IP address
-//                Broadcast Transmit: Not Allowed
-//  Node -        Receive:            Reply by broadcasting ArtPollReply
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Not Allowed
-//  MediaServer - Receive:            Reply by broadcasting ArtPollReply
-//                Unicast Transmit:   Not Allowed
-//                Broadcast Transmit: Not Allowed
+//
+//	Controller -  Receive:            No Action
+//	              Unicast Transmit:   Controller transmits to a specific node IP address
+//	              Broadcast Transmit: Not Allowed
+//	Node -        Receive:            Reply by broadcasting ArtPollReply
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Not Allowed
+//	MediaServer - Receive:            Reply by broadcasting ArtPollReply
+//	              Unicast Transmit:   Not Allowed
+//	              Broadcast Transmit: Not Allowed
 type ArtAddressPacket struct {
 	// Inherit the Header header
 	Header
@@ -73,7 +74,9 @@ type ArtAddressPacket struct {
 
 // NewArtAddressPacket returns an ArtNetPacket with the correct OpCode
 func NewArtAddressPacket() *ArtAddressPacket {
-	return &ArtAddressPacket{}
+	return &ArtAddressPacket{
+		Header: NewHeader(code.OpAddress),
+	}
 }
 
 // MarshalBinary marshals an ArtAddressPacket into a byte slice.
@@ -83,21 +86,10 @@ func (p *ArtAddressPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtAddressPacket.
 func (p *ArtAddressPacket) UnmarshalBinary(b []byte) error {
-	return unmarshalPacket(p, b)
-}
-
-// validate is used to validate the Packet.
-func (p *ArtAddressPacket) validate() error {
-	if err := p.Header.validate(); err != nil {
+	err := unmarshalPacket(p, b)
+	if err != nil {
 		return err
 	}
-	if p.OpCode != code.OpAddress {
-		return errInvalidOpCode
-	}
-	return nil
-}
 
-// finish is used to finish the Packet for sending.
-func (p *ArtAddressPacket) finish() {
-	p.Header.finish()
+	return p.Header.validate(code.OpAddress)
 }
