@@ -31,8 +31,7 @@ type Controller struct {
 	Nodes    map[string]*ControlledNode
 	nodeLock sync.Mutex
 
-	maxUpdateInterval    time.Duration
-	minUpdateInterval    time.Duration
+	updateInterval       time.Duration
 	expectActiveInterval time.Duration
 	pollInterval         time.Duration
 }
@@ -45,8 +44,7 @@ func NewController(name string, ip net.IP, log Logger, opts ...Option) *Controll
 
 		Nodes: map[string]*ControlledNode{},
 
-		minUpdateInterval:    time.Millisecond * 20,
-		maxUpdateInterval:    time.Millisecond * 20,
+		updateInterval:       time.Millisecond * 30,
 		expectActiveInterval: time.Second * 10, // nodes are stale after 5 missed ArtPoll's
 		pollInterval:         time.Second * 2,
 	}
@@ -158,7 +156,7 @@ func (c *Controller) SendDMX(ip net.IP, address types.Address, dmx [512]byte) er
 
 // dmxUpdateLoop will periodically update nodes until ctx ends
 func (c *Controller) dmxUpdateLoop(ctx context.Context) {
-	ticker := time.NewTicker(c.minUpdateInterval)
+	ticker := time.NewTicker(c.updateInterval)
 
 	// loop until shutdown
 	for {
@@ -179,7 +177,7 @@ func (c *Controller) dmxUpdate() {
 
 	// send DMX buffer update
 	for _, node := range c.Nodes {
-		packets := node.getDMXUpdates(c.minUpdateInterval, c.maxUpdateInterval)
+		packets := node.getDMXUpdates()
 		for _, packet := range packets {
 			c.cNode.send(node.UDPAddress, packet)
 		}

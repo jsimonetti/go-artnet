@@ -133,7 +133,7 @@ func sortAddresses(addresses []types.Address) {
 }
 
 // getDMXUpdates will create all ArtDMXPackets which need to be sent
-func (cn *ControlledNode) getDMXUpdates(activeInterval, passiveInterval time.Duration) []*packet.ArtDMXPacket {
+func (cn *ControlledNode) getDMXUpdates() []*packet.ArtDMXPacket {
 	cn.nodeLock.Lock()
 	defer cn.nodeLock.Unlock()
 
@@ -141,7 +141,7 @@ func (cn *ControlledNode) getDMXUpdates(activeInterval, passiveInterval time.Dur
 
 	for address, output := range cn.Outputs {
 		dmxBuffer := output.dmxBuffer
-		dmx := dmxBuffer.checkUpdate(activeInterval, passiveInterval)
+		dmx := dmxBuffer.get()
 		if dmx == nil {
 			continue
 		}
@@ -177,34 +177,15 @@ type bufferOutput struct {
 }
 
 type dmxBuffer struct {
-	Port       OutputPort
-	Data       types.DMXData
-	LastUpdate time.Time
-	Stale      bool
+	Port OutputPort
+	Data types.DMXData
 }
 
 func (b *dmxBuffer) set(dmx types.DMXData) {
-	b.Stale = true
 	copy(b.Data[:], dmx[:])
 }
 
-func (b *dmxBuffer) checkUpdate(activeInterval, passiveInterval time.Duration) *types.DMXData {
-	now := time.Now()
-	durationSinceLastUpdate := now.Sub(b.LastUpdate)
-
-	if b.Stale {
-		if durationSinceLastUpdate < activeInterval {
-			return nil
-		}
-	} else {
-		if durationSinceLastUpdate < passiveInterval {
-			return nil
-		}
-	}
-
-	b.LastUpdate = now
-	b.Stale = false
-
+func (b *dmxBuffer) get() *types.DMXData {
 	var dmx types.DMXData
 	copy(dmx[:], b.Data[:])
 	return &dmx

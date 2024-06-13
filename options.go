@@ -13,10 +13,10 @@ func (c *Controller) SetOption(option Option) error {
 	return option(c)
 }
 
-// MaxFPS sets the maximum amount of updates sent out per second
-func MaxFPS(fps int) Option {
+// UpdateInterval sets the interval on which dmx updates will be sent out to known devices
+func UpdateInterval(d time.Duration) Option {
 	return func(c *Controller) error {
-		c.minUpdateInterval = time.Duration(fps) / time.Second
+		c.updateInterval = d
 		return nil
 	}
 }
