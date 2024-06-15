@@ -1,4 +1,4 @@
-package types
+package artnettypes
 
 // Version 14 support for this package only
 // The hex representation of this has the high byte first

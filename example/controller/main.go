@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/jsimonetti/go-artnet"
+	"github.com/jsimonetti/go-artnet/artnettypes"
 	"github.com/jsimonetti/go-artnet/packet"
-	"github.com/jsimonetti/go-artnet/types"
 )
 
 func main() {
@@ -27,34 +27,31 @@ func main() {
 	c.LogNodes()
 	time.Sleep(time.Second * 1)
 
-	c.RangeIPs(func(ip string) {
-		log.With(artnet.Fields{"ip": ip}).Infof("Range over ip")
-		c.RangeOutputsOf(ip, func(a types.Address) {
-			log.With(artnet.Fields{"address": a, "ip": ip}).Infof("Range over address")
-			for i := 0; i < 30; i++ {
-				err := c.SendDMX(net.ParseIP(ip), a, get170(0xff, 0x00, 0x00))
-				if err != nil {
-					log.With(artnet.Fields{"error": err}).Error("Failed to Send DMX Data")
-				}
-				time.Sleep(time.Millisecond * 30)
+	c.RangeAll(func(ip string, a artnettypes.Address) {
+		log.With(artnet.Fields{"address": a, "ip": ip}).Infof("Range over address")
+		for i := 0; i < 30; i++ {
+			err := c.SendDMX(net.ParseIP(ip), a, get170(0xff, 0x00, 0x00))
+			if err != nil {
+				log.With(artnet.Fields{"error": err}).Error("Failed to Send DMX Data")
 			}
+			time.Sleep(time.Millisecond * 30)
+		}
 
-			for i := 0; i < 30; i++ {
-				err := c.SendDMX(net.ParseIP(ip), a, get170(0x00, 0xff, 0x00))
-				if err != nil {
-					log.With(artnet.Fields{"error": err}).Error("Failed to Send DMX Data")
-				}
-				time.Sleep(time.Millisecond * 30)
+		for i := 0; i < 30; i++ {
+			err := c.SendDMX(net.ParseIP(ip), a, get170(0x00, 0xff, 0x00))
+			if err != nil {
+				log.With(artnet.Fields{"error": err}).Error("Failed to Send DMX Data")
 			}
+			time.Sleep(time.Millisecond * 30)
+		}
 
-			for i := 0; i < 30; i++ {
-				err := c.SendDMX(net.ParseIP(ip), a, get170(0x00, 0x00, 0xff))
-				if err != nil {
-					log.With(artnet.Fields{"error": err}).Error("Failed to Send DMX Data")
-				}
-				time.Sleep(time.Millisecond * 30)
+		for i := 0; i < 30; i++ {
+			err := c.SendDMX(net.ParseIP(ip), a, get170(0x00, 0x00, 0xff))
+			if err != nil {
+				log.With(artnet.Fields{"error": err}).Error("Failed to Send DMX Data")
 			}
-		})
+			time.Sleep(time.Millisecond * 30)
+		}
 	})
 
 	time.Sleep(time.Second * 60)

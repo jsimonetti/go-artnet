@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/jsimonetti/go-artnet/artnettypes"
 	"github.com/jsimonetti/go-artnet/packet"
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/types"
 )
 
 // InputPort contains information for an input port
 type InputPort struct {
-	Address types.Address
+	Address artnettypes.Address
 	Type    code.PortType
 	Status  code.GoodInput
 }
 
 // OutputPort contains information for an input port
 type OutputPort struct {
-	Address types.Address
+	Address artnettypes.Address
 	Type    code.PortType
 	Status  code.GoodOutput
 }
@@ -36,7 +36,7 @@ type NodeConfig struct {
 	Ethernet  net.HardwareAddr
 	IP        net.IP
 	BindIP    net.IP
-	BindIndex types.BindIndex
+	BindIndex artnettypes.BindIndex
 	Port      uint16
 
 	Report  code.NodeReport
@@ -44,7 +44,7 @@ type NodeConfig struct {
 	Status2 code.Status2
 	Status3 code.Status3
 
-	BaseAddress types.Address
+	BaseAddress artnettypes.Address
 	InputPorts  []InputPort
 	OutputPorts []OutputPort
 }
@@ -155,7 +155,7 @@ func newNodeConfigFrom(p *packet.ArtPollReplyPacket) NodeConfig {
 		Status1:      p.Status1,
 		Status2:      p.Status2,
 		Status3:      p.Status3,
-		BaseAddress: types.Address{
+		BaseAddress: artnettypes.Address{
 			Net:    p.NetSwitch,
 			SubUni: p.SubSwitch << 4,
 		},
@@ -164,7 +164,7 @@ func newNodeConfigFrom(p *packet.ArtPollReplyPacket) NodeConfig {
 	for i := 0; i < int(p.NumPorts) && i < 4; i++ {
 		if p.PortTypes[i].Output() {
 			nodeConfig.OutputPorts = append(nodeConfig.OutputPorts, OutputPort{
-				Address: types.Address{
+				Address: artnettypes.Address{
 					Net:    nodeConfig.BaseAddress.Net,
 					SubUni: nodeConfig.BaseAddress.SubUni | p.SwOut[i],
 				},
@@ -174,7 +174,7 @@ func newNodeConfigFrom(p *packet.ArtPollReplyPacket) NodeConfig {
 		}
 		if p.PortTypes[i].Input() {
 			nodeConfig.InputPorts = append(nodeConfig.InputPorts, InputPort{
-				Address: types.Address{
+				Address: artnettypes.Address{
 					Net:    nodeConfig.BaseAddress.Net,
 					SubUni: nodeConfig.BaseAddress.SubUni | p.SwIn[i],
 				},

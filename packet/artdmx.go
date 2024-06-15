@@ -1,8 +1,8 @@
 package packet
 
 import (
+	"github.com/jsimonetti/go-artnet/artnettypes"
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/types"
 )
 
 var _ ArtNetPacket = &ArtDMXPacket{}
@@ -64,7 +64,7 @@ type ArtDMXPacket struct {
 	Length uint16
 
 	// Data is a string of DMX512 lighting data
-	Data types.DMXData
+	Data artnettypes.DMXData
 }
 
 const (
@@ -73,7 +73,7 @@ const (
 )
 
 // NewArtDMXPacket returns an ArtNetPacket with the correct OpCode
-func NewArtDMXPacket(a types.Address, data types.DMXData, sequence uint8) *ArtDMXPacket {
+func NewArtDMXPacket(a artnettypes.Address, data artnettypes.DMXData, sequence uint8) *ArtDMXPacket {
 	p := &ArtDMXPacket{
 		Header:   NewHeader(code.OpDMX),
 		Net:      a.Net,
@@ -110,8 +110,8 @@ func (p ArtDMXPacket) GetLength() uint16 {
 	return swapUint16(p.Length)
 }
 
-func (p ArtDMXPacket) GetAddress() types.Address {
-	return types.Address{
+func (p ArtDMXPacket) GetAddress() artnettypes.Address {
+	return artnettypes.Address{
 		Net:    p.Net,
 		SubUni: p.SubUni,
 	}

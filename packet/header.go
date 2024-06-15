@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jsimonetti/go-artnet/artnettypes"
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/types"
 )
 
 // Various errors which may occur when attempting to marshal or unmarshal
@@ -26,15 +26,15 @@ var (
 // ArtNetPort is the fixed ArtNet port 6454.
 const ArtNetPort = 6454
 
-const version = types.CurrentVersion
+const version = artnettypes.CurrentVersion
 
-var artNet = types.ArtNet
+var artNet = artnettypes.ArtNet
 
 // Header contains the base header for an ArtNet Packet
 type Header struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
 	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
-	types.ID
+	artnettypes.ID
 
 	// OpCode defines the class of data following within this UDP packet.
 	// Transmitted low byte first, GetOpCode() addresses this.
@@ -42,7 +42,7 @@ type Header struct {
 
 	// Version of this packet
 	// Transmitted low byte first, GetVersion() addresses this.
-	types.Version
+	artnettypes.Version
 }
 
 func NewHeader(opcode code.OpCode) Header {
@@ -54,7 +54,7 @@ func NewHeader(opcode code.OpCode) Header {
 }
 
 func (p *Header) validate(expectedOpCode code.OpCode) error {
-	if p.ID != types.ArtNet {
+	if p.ID != artnettypes.ArtNet {
 		return errInvalidPacket
 	}
 
@@ -80,7 +80,7 @@ func (h *Header) unmarshal(b []byte) error {
 type HeaderWithoutVersion struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
 	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
-	types.ID
+	artnettypes.ID
 
 	// OpCode defines the class of data following within this UDP packet.
 	// Transmitted low byte first.
@@ -89,13 +89,13 @@ type HeaderWithoutVersion struct {
 
 func NewHeaderWithoutVersion(opcode code.OpCode) HeaderWithoutVersion {
 	return HeaderWithoutVersion{
-		ID:     types.ArtNet,
+		ID:     artnettypes.ArtNet,
 		OpCode: code.OpCode(swapUint16(uint16(opcode))),
 	}
 }
 
 func (p *HeaderWithoutVersion) validate(expectedOpCode code.OpCode) error {
-	if p.ID != types.ArtNet {
+	if p.ID != artnettypes.ArtNet {
 		return errInvalidPacket
 	}
 

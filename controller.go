@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jsimonetti/go-artnet/artnettypes"
 	"github.com/jsimonetti/go-artnet/packet"
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/types"
 )
 
 var defaultBroadcastAddr = net.UDPAddr{
@@ -27,8 +27,8 @@ type Controller struct {
 	log           Logger
 	broadcastAddr net.UDPAddr
 
-	// Nodes is map of IPs to ControlledNodes that are seen by this controller
-	Nodes    map[string]*ControlledNode
+	// nodes is map of IPs to ControlledNodes that are seen by this controller
+	nodes    map[string]*ControlledNode
 	nodeLock sync.Mutex
 
 	updateInterval       time.Duration
@@ -42,7 +42,7 @@ func NewController(name string, ip net.IP, log Logger, opts ...Option) *Controll
 		log:           log,
 		broadcastAddr: defaultBroadcastAddr,
 
-		Nodes: map[string]*ControlledNode{},
+		nodes: map[string]*ControlledNode{},
 
 		updateInterval:       time.Millisecond * 30,
 		expectActiveInterval: time.Second * 10, // nodes are stale after 5 missed ArtPoll's
@@ -132,13 +132,13 @@ func (c *Controller) pollLoop(ctx context.Context) {
 }
 
 // SendDMX will set the DMXBuffer for a destination address
-func (c *Controller) SendDMX(ip net.IP, address types.Address, dmx [512]byte) error {
+func (c *Controller) SendDMX(ip net.IP, address artnettypes.Address, dmx [512]byte) error {
 	// c.log.With(Fields{"address": address.String()}).Debug("received update channels")
 
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	cn, ok := c.Nodes[ip.String()]
+	cn, ok := c.nodes[ip.String()]
 	if !ok {
 		err := errors.New("could not find node for ip")
 		c.log.With(Fields{"ip": ip.String()}).Error(err)
@@ -176,10 +176,10 @@ func (c *Controller) dmxUpdate() {
 	defer c.nodeLock.Unlock()
 
 	// send DMX buffer update
-	for _, node := range c.Nodes {
+	for _, node := range c.nodes {
 		packets := node.getDMXUpdates()
 		for _, packet := range packets {
-			c.cNode.send(node.UDPAddress, packet)
+			c.cNode.send(node.udpAddress, packet)
 		}
 	}
 	c.cNode.send(c.broadcastAddr, packet.NewArtSyncPacket())
@@ -190,15 +190,15 @@ func (c *Controller) updateNode(cfg NodeConfig) {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	node, ok := c.Nodes[cfg.IP.String()]
+	node, ok := c.nodes[cfg.IP.String()]
 	if ok {
 		// c.log.With(Fields{"node": cfg.Name, "ip": cfg.IP.String()}).Debug("updated node")
-		c.LogNode(cfg)
+		// c.LogNode(cfg)
 		node.update(cfg)
 		return
 	}
 
-	c.Nodes[cfg.IP.String()] = newControlledNode(cfg)
+	c.nodes[cfg.IP.String()] = newControlledNode(cfg)
 }
 
 // expireNodesLoop will remove stale Nodes from the list of known nodes
@@ -220,13 +220,26 @@ func (c *Controller) expireNodes() {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	for ip, node := range c.Nodes {
-		if time.Now().Sub(node.LastSeen) > c.expectActiveInterval {
+	for ip, node := range c.nodes {
+		if time.Now().Sub(node.lastSeen) > c.expectActiveInterval {
 			// node is stale
 			c.log.With(Fields{"ip": ip}).Debug("removing stale node")
-			delete(c.Nodes, ip)
+			delete(c.nodes, ip)
 		}
 	}
+}
+
+func (c *Controller) GetNode(ip net.IP) (*ControlledNode, error) {
+	c.nodeLock.Lock()
+	defer c.nodeLock.Unlock()
+
+	cn, ok := c.nodes[ip.String()]
+	if !ok {
+		err := errors.New("could not find node for ip")
+		c.log.With(Fields{"ip": ip.String()}).Error(err)
+		return nil, err
+	}
+	return cn, nil
 }
 
 func (c *Controller) LogNodes() {
@@ -242,13 +255,13 @@ func (c *Controller) LogNodes() {
 }
 
 func (c *Controller) LogNode(cfg NodeConfig) {
-	outs := make([]types.Address, len(cfg.OutputPorts))
+	outs := make([]artnettypes.Address, len(cfg.OutputPorts))
 	for i, port := range cfg.OutputPorts {
 		outs[i] = port.Address
 	}
 	sortAddresses(outs)
 
-	ins := make([]types.Address, len(cfg.InputPorts))
+	ins := make([]artnettypes.Address, len(cfg.InputPorts))
 	for i, port := range cfg.InputPorts {
 		ins[i] = port.Address
 	}
@@ -277,18 +290,26 @@ func (c *Controller) RangeNodes(f func(cn *ControlledNode)) {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	for _, cn := range c.Nodes {
+	for _, cn := range c.nodes {
 		f(cn)
 	}
 }
 
-func (c *Controller) RangeIPs(f func(ip string)) {
+func (c *Controller) RangeAll(f func(ip string, a artnettypes.Address)) {
+	c.rangeIPs(func(ip string) {
+		c.rangeOutputsOf(ip, func(a artnettypes.Address) {
+			f(ip, a)
+		})
+	})
+}
+
+func (c *Controller) rangeIPs(f func(ip string)) {
 	c.nodeLock.Lock()
 
-	ips := make([]string, len(c.Nodes))
+	ips := make([]string, len(c.nodes))
 
 	i := 0
-	for ip, _ := range c.Nodes {
+	for ip := range c.nodes {
 		ips[i] = ip
 		i++
 	}
@@ -301,11 +322,11 @@ func (c *Controller) RangeIPs(f func(ip string)) {
 	}
 }
 
-func (c *Controller) RangeOutputsOf(ip string, f func(a types.Address)) {
+func (c *Controller) rangeOutputsOf(ip string, f func(a artnettypes.Address)) {
 	c.nodeLock.Lock()
 	defer c.nodeLock.Unlock()
 
-	if cn, ok := c.Nodes[ip]; ok {
+	if cn, ok := c.nodes[ip]; ok {
 		go cn.RangeOutputs(f)
 	}
 }

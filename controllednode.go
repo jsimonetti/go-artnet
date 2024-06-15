@@ -7,36 +7,36 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jsimonetti/go-artnet/artnettypes"
 	"github.com/jsimonetti/go-artnet/packet"
-	"github.com/jsimonetti/go-artnet/types"
 )
 
 // ControlledNode holds the configuration of a node we control
 type ControlledNode struct {
 	nodeLock sync.Mutex
 
-	BoundDevices map[types.BindIndex]NodeConfig
+	BoundDevices map[artnettypes.BindIndex]NodeConfig
 
-	LastSeen   time.Time
-	UDPAddress net.UDPAddr
+	lastSeen   time.Time
+	udpAddress net.UDPAddr
 
 	Sequence uint8
 
-	Outputs map[types.Address]bufferOutput
-	Inputs  map[types.Address]InputPort
+	Outputs map[artnettypes.Address]bufferOutput
+	Inputs  map[artnettypes.Address]InputPort
 }
 
 func newControlledNode(cfg NodeConfig) *ControlledNode {
 	cn := &ControlledNode{
-		BoundDevices: make(map[types.BindIndex]NodeConfig),
+		BoundDevices: make(map[artnettypes.BindIndex]NodeConfig),
 
-		LastSeen:   time.Now(),
-		UDPAddress: net.UDPAddr{IP: cfg.IP, Port: packet.ArtNetPort},
+		lastSeen:   time.Now(),
+		udpAddress: net.UDPAddr{IP: cfg.IP, Port: packet.ArtNetPort},
 
 		Sequence: 0,
 
-		Outputs: make(map[types.Address]bufferOutput),
-		Inputs:  make(map[types.Address]InputPort),
+		Outputs: make(map[artnettypes.Address]bufferOutput),
+		Inputs:  make(map[artnettypes.Address]InputPort),
 	}
 
 	cn.update(cfg)
@@ -47,7 +47,7 @@ func (cn *ControlledNode) update(cfg NodeConfig) {
 	cn.nodeLock.Lock()
 	defer cn.nodeLock.Unlock()
 
-	cn.LastSeen = time.Now()
+	cn.lastSeen = time.Now()
 
 	if cfgPrev, ok := cn.BoundDevices[cfg.BindIndex]; ok {
 		// previously known device
@@ -101,10 +101,10 @@ func (cn *ControlledNode) update(cfg NodeConfig) {
 
 }
 
-func (cn *ControlledNode) RangeOutputs(f func(a types.Address)) {
+func (cn *ControlledNode) RangeOutputs(f func(a artnettypes.Address)) {
 	cn.nodeLock.Lock()
 
-	addresses := make([]types.Address, len(cn.Outputs))
+	addresses := make([]artnettypes.Address, len(cn.Outputs))
 
 	i := 0
 	for address := range cn.Outputs {
@@ -120,7 +120,7 @@ func (cn *ControlledNode) RangeOutputs(f func(a types.Address)) {
 	}
 }
 
-func sortAddresses(addresses []types.Address) {
+func sortAddresses(addresses []artnettypes.Address) {
 	sort.Slice(addresses, func(i, j int) bool {
 		ii := addresses[i]
 		jj := addresses[j]
@@ -130,6 +130,18 @@ func sortAddresses(addresses []types.Address) {
 		return ii.SubUni < jj.SubUni
 	})
 
+}
+
+func (cn *ControlledNode) GetLastSeen() time.Time {
+	cn.nodeLock.Lock()
+	defer cn.nodeLock.Unlock()
+	return cn.lastSeen
+}
+
+func (cn *ControlledNode) GetUDPAddress() net.UDPAddr {
+	cn.nodeLock.Lock()
+	defer cn.nodeLock.Unlock()
+	return cn.udpAddress
 }
 
 // getDMXUpdates will create all ArtDMXPackets which need to be sent
@@ -155,7 +167,7 @@ func (cn *ControlledNode) getDMXUpdates() []*packet.ArtDMXPacket {
 }
 
 // setDMXBuffer will update the buffer on a universe address
-func (cn *ControlledNode) SetDMXBuffer(address types.Address, dmx types.DMXData) error {
+func (cn *ControlledNode) SetDMXBuffer(address artnettypes.Address, dmx artnettypes.DMXData) error {
 	cn.nodeLock.Lock()
 	defer cn.nodeLock.Unlock()
 
@@ -178,15 +190,15 @@ type bufferOutput struct {
 
 type dmxBuffer struct {
 	Port OutputPort
-	Data types.DMXData
+	Data artnettypes.DMXData
 }
 
-func (b *dmxBuffer) set(dmx types.DMXData) {
+func (b *dmxBuffer) set(dmx artnettypes.DMXData) {
 	copy(b.Data[:], dmx[:])
 }
 
-func (b *dmxBuffer) get() *types.DMXData {
-	var dmx types.DMXData
+func (b *dmxBuffer) get() *artnettypes.DMXData {
+	var dmx artnettypes.DMXData
 	copy(dmx[:], b.Data[:])
 	return &dmx
 }

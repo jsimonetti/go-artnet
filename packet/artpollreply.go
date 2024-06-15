@@ -3,8 +3,8 @@ package packet
 import (
 	"fmt"
 
+	"github.com/jsimonetti/go-artnet/artnettypes"
 	"github.com/jsimonetti/go-artnet/packet/code"
-	"github.com/jsimonetti/go-artnet/types"
 )
 
 var _ ArtNetPacket = &ArtPollReplyPacket{}
@@ -126,7 +126,7 @@ type ArtPollReplyPacket struct {
 
 	// BindIndex represents the order of bound devices. A lower number means closer to root device.
 	// A value of 1 means root device.
-	BindIndex types.BindIndex
+	BindIndex artnettypes.BindIndex
 
 	// Status2 indicates Product capabilities
 	Status2 code.Status2
