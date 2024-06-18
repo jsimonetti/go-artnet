@@ -12,6 +12,13 @@ type Address struct {
 	Net    uint8 // 0-128
 }
 
+func NewAddress(ai uint16) Address {
+	return Address{
+		SubUni: uint8(ai >> 8),
+		Net:    uint8(ai & 0x00ff),
+	}
+}
+
 // String returns a string representation of Address
 func (a Address) String() string {
 	return fmt.Sprintf("%d:%d.%d", a.Net, a.SubUni>>4, a.SubUni&0x0f)
