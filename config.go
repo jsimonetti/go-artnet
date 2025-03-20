@@ -57,6 +57,7 @@ type NodeConfig struct {
 	Report  []code.NodeReportCode
 	Status1 code.Status1
 	Status2 code.Status2
+	Status3 code.Status3
 
 	BaseAddress Address
 	InputPorts  []InputPort
@@ -76,6 +77,7 @@ func ArtPollReplyFromConfig(c NodeConfig) *packet.ArtPollReplyPacket {
 		BindIndex:   c.BindIndex,
 		Status1:     c.Status1,
 		Status2:     c.Status2,
+		Status3:     c.Status3,
 		NetSwitch:   c.BaseAddress.Net,
 		SubSwitch:   c.BaseAddress.SubUni,
 		NumPorts:    c.NumberOfPorts(),
@@ -169,6 +171,7 @@ func ConfigFromArtPollReply(p packet.ArtPollReplyPacket) NodeConfig {
 		Port:         p.Port,
 		Status1:      p.Status1,
 		Status2:      p.Status2,
+		Status3:      p.Status3,
 		BaseAddress: Address{
 			Net:    p.NetSwitch,
 			SubUni: p.SubSwitch,
