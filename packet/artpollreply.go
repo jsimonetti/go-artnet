@@ -14,9 +14,10 @@ var _ ArtNetPacket = &ArtPollReplyPacket{}
 // is also broadcast to the Directed Broadcast address by all Art-Net devices on power up.
 //
 // Packet Strategy:
-//  All devices - Receive:            No Art-Net action.
-//                Unicast Transmit:   Not Allowed.
-//                Broadcast Transmit: Directed Broadcasts this packet in response to an ArtPoll.
+//
+//	All devices - Receive:            No Art-Net action.
+//	              Unicast Transmit:   Not Allowed.
+//	              Broadcast Transmit: Directed Broadcasts this packet in response to an ArtPoll.
 type ArtPollReplyPacket struct {
 	// ID is an Array of 8 characters, the final character is a null termination.
 	// Value should be []byte{‘A’,‘r’,‘t’,‘-‘,‘N’,‘e’,‘t’,0x00}
@@ -76,7 +77,7 @@ type ArtPollReplyPacket struct {
 
 	// NodeReport is a textual report of the Node’s operating status or operational errors.
 	// It is primarily intended for ‘engineering’ data.
-	NodeReport [64]code.NodeReportCode
+	NodeReport code.NodeReport
 
 	// NumPorts describes the number of input or output ports. If number of inputs is not
 	// equal to number of outputs, the largest value is taken. Zero is a legal value if no
@@ -120,6 +121,11 @@ type ArtPollReplyPacket struct {
 	// Macaddress of the Node. Set to zero if node cannot supply this information.
 	Macaddress [6]byte
 
+	// ============================================================================================
+	//                                  Optional Fields - 32 Bytes
+	//                   (only 207 bytes required for backwards compatibility)
+	// ============================================================================================
+
 	// BindIP is the IP of the root device if this unit is part of a larger or modular product.
 	BindIP [4]byte
 
@@ -130,9 +136,30 @@ type ArtPollReplyPacket struct {
 	// Status2 indicates Product capabilities
 	Status2 code.Status2
 
+	// GoodOutputB defines output status of the node
+	GoodOutputB [4]byte
+
+	// Status3 indicates general product state
+	Status3 code.Status3
+
+	// DefaultResponderUID
+	DefaultResponderUID [6]byte
+
+	// User is available for user Specific Data
+	User [2]byte
+
+	// RefreshRate specify the maximum refresh rate, expressed in Hz
+	// Designed to allow refresh rates above DMX512 rate
+	RefreshRate uint16
+
 	// Filler bytes. Transmit as zero. For future expansion.
-	_ [26]byte
+	_ [11]byte
 }
+
+const (
+	minimumArtPollReplyPacketSize int = 207
+	maximumArtPollReplyPacketSize int = minimumArtPollReplyPacketSize + 32
+)
 
 // NewArtPollReplyPacket returns a new ArtPollReply Packet
 func NewArtPollReplyPacket() *ArtPollReplyPacket {
@@ -151,6 +178,14 @@ func (p *ArtPollReplyPacket) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the contents of a byte slice into an ArtPollReplyPacket.
 func (p *ArtPollReplyPacket) UnmarshalBinary(b []byte) error {
+	if len(b) < minimumArtPollReplyPacketSize {
+		return fmt.Errorf("packet was below minimum size: %d, got: %d", minimumArtPollReplyPacketSize, len(b))
+	}
+
+	if len(b) < maximumArtPollReplyPacketSize {
+		padding := make([]byte, maximumArtPollReplyPacketSize-len(b))
+		b = append(b, padding...)
+	}
 	return unmarshalPacket(p, b)
 }
 
