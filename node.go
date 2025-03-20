@@ -114,6 +114,9 @@ func (n *Node) isShutdown() bool {
 
 // Start will start the controller
 func (n *Node) Start() error {
+	if err := n.Config.validate(); err != nil {
+		return err
+	}
 	n.log.With(Fields{"ip": n.Config.IP.String(), "type": n.Config.Type.String()}).Debug("node started")
 
 	n.sendCh = make(chan netPayload, 10)
