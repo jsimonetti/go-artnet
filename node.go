@@ -22,10 +22,11 @@ type Node struct {
 	broadcastAddr net.UDPAddr
 
 	// conn is the UDP connection this node will listen on
-	conn      *net.UDPConn
-	localAddr net.UDPAddr
-	sendCh    chan netPayload
-	recvCh    chan netPayload
+	conn       *net.UDPConn
+	localAddr  net.UDPAddr
+	listenAddr net.UDPAddr
+	sendCh     chan netPayload
+	recvCh     chan netPayload
 
 	// shutdownCh will be closed on shutdown of the node
 	shutdownCh   chan struct{}
@@ -57,6 +58,7 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger, opts ...N
 			Name: name,
 			Type: style,
 		},
+		listenAddr:    net.UDPAddr{Port: packet.ArtNetPort},
 		broadcastAddr: defaultBroadcastAddr,
 		conn:          nil,
 		shutdown:      true,
@@ -85,6 +87,10 @@ func NewNode(name string, style code.StyleCode, ip net.IP, log Logger, opts ...N
 	}
 
 	return n
+}
+
+func (n *Node) Connection() *net.UDPConn {
+	return n.conn
 }
 
 // Stop will stop all running routines and close the network connection
@@ -120,7 +126,7 @@ func (n *Node) Start() error {
 	n.shutdownCh = make(chan struct{})
 	n.shutdown = false
 
-	c, err := net.ListenPacket("udp4", fmt.Sprintf(":%d", packet.ArtNetPort))
+	c, err := net.ListenPacket("udp4", n.listenAddr.String())
 	if err != nil {
 		n.shutdownErr = fmt.Errorf("error net.ListenPacket: %s", err)
 		n.log.With(Fields{"error": err}).Error("error net.ListenPacket")
