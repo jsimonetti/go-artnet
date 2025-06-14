@@ -1,9 +1,39 @@
 package code
 
+import (
+	"fmt"
+	"strconv"
+)
+
 //go:generate stringer -type=NodeReportCode
 
+type NodeReport [64]byte
+
+func NewNodeReport(code NodeReportCode, counter int, msg string) (report NodeReport) {
+	codeString := strconv.FormatInt(int64(code), 16)
+
+	variableSizeReport := fmt.Sprintf("#%s [%04.0f] %s", codeString, float64(counter), msg)
+
+	copy(report[:], variableSizeReport)
+
+	return
+}
+
+func (c NodeReport) String() string {
+	unparsedReportCode := c[1:5]
+	counterAndMessage := string(c[5:])
+
+	intReportCode, err := strconv.ParseInt(string(unparsedReportCode), 16, 16)
+	reportCode := NodeReportCode(intReportCode).String()
+	if err != nil {
+		reportCode = err.Error()
+	}
+
+	return reportCode + counterAndMessage
+}
+
 // NodeReportCode defines generic error, advisory and status messages for both Nodes and Controllers
-type NodeReportCode uint8
+type NodeReportCode uint16
 
 const (
 	// RcDebug Booted in debug mode (Only used in development)
